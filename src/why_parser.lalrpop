@@ -1,0 +1,135 @@
+use crate::why::*;
+
+grammar;
+
+
+List<T>: Vec<T> = {
+    <items: (T ",")*> <last: T> ","? => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
+        items.push(last);
+        items
+    }
+}
+
+pub Why: Op = Expr => <>;
+Expr: Op = {
+    "let" <mut defs: List<(Identifier "=" Expr)>> "in" <ret:Expr+> "end" => {
+        let (name, _, val) = defs.pop().unwrap();
+        let mut result = Op::Let(name, vec![val], ret);
+
+        while let Some((name, _, expr)) = defs.pop() {
+            result = Op::Let(name, vec![expr], vec![result]);
+        }
+
+        result
+    },
+
+    "do" <Expr+> "end" => Op::Do(<>),
+
+    "while" <cond: Expr> "do" <body: Expr+> "end" => {
+        Op::While(vec![cond], body)
+    },
+
+    "if" <cond: Expr> "do" <body: Expr+> "end" => {
+        Op::If(vec![cond], body)
+    },
+
+    "frame" <args:Size> "->" <ret:Size> "do" <code:Expr+> "end" => {
+        Op::Frame(args, ret, code)
+    },
+
+    "fn" "(" <args: List<(Identifier ":" Size)>> ")" "->" <ret_size:Size> "do" <code:Expr+> "end" => {
+        function(args.into_iter().map(|(name, _, size)| (name, size)).collect(), ret_size, code)
+    },
+
+    AtomicExpr => <>,
+}
+
+AtomicExpr: Op = {
+    "(" <Expr+> ")" => Op::Do(<>),
+
+    "alloc" <size:Size> => Op::Do(vec![
+        Op::PushLiteral(Literal(size)),
+        Op::Alloc,
+    ]),
+    "free" => Op::Free,
+
+    "get" <Size> => Op::Do(vec![
+        Op::Stalloc(<>),
+        Op::Pop(TMP2),
+    ]),
+    "dump" <Size> => Op::Stfree(<>),
+
+    <Num> => Op::PushLiteral(Literal(<>)),
+    "=" <Size> => Op::Store(<>),
+    "=" => Op::Store(1),
+    "@" => Op::Load(1),
+
+    "+" => Op::Add,
+    "-" => Op::Sub,
+    "*" => Op::Mul,
+    "/" => Op::Div,
+
+    "==" => Op::Eq,
+    "!=" => Op::Neq,
+
+    "!" => Op::Not,
+    "&" => Op::And,
+    "|" => Op::Or,
+
+    "$FP" => Op::LoadFrom(FP, 1),
+    "$R0" => Op::LoadFrom(R0, 1),
+    "$R1" => Op::LoadFrom(R1, 1),
+    "$R2" => Op::LoadFrom(R2, 1),
+    "$R3" => Op::LoadFrom(R3, 1),
+    "$R4" => Op::LoadFrom(R4, 1),
+    "$R5" => Op::LoadFrom(R5, 1),
+
+    "&FP" => Op::PushAddress(FP.get_address().unwrap()),
+    "&R0" => Op::PushAddress(R0.get_address().unwrap()),
+    "&R1" => Op::PushAddress(R1.get_address().unwrap()),
+    "&R2" => Op::PushAddress(R2.get_address().unwrap()),
+    "&R3" => Op::PushAddress(R3.get_address().unwrap()),
+    "&R4" => Op::PushAddress(R4.get_address().unwrap()),
+    "&R5" => Op::PushAddress(R5.get_address().unwrap()),
+
+    Identifier => Op::Macro(<>),
+}
+
+Size: u32 = {
+    "%" <AtomicSize> => <>,
+}
+
+AtomicSize: u32 = {
+    "void" => 0,
+    "int" => 1,
+    "char" => 1,
+    "bool" => 1,
+    "(" <first:(Size ",")+> <last:Size?> ")" => {
+        let mut result = 0;
+
+        for (size, _) in first {
+            result += size;
+        }
+        if let Some(size) = last {
+            result += size;
+        }
+
+        result
+    }
+}
+
+Str: String = <s:r#""(\\.|[^"])*""#> => String::from(&s[1..s.len()-1]).replace("\\\"", "\"").replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t").replace("\\0", "\0");
+Char: char = <s:r#"'(\\.|[^'])'"#> => s.replace("\\'", "'").replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t").replace("\\0", "\0").chars().nth(1).unwrap() as char;
+Bool: bool = {
+    "true" => true,
+    "false" => false,
+}
+
+Num: u32 = {
+    r"[1-9][0-9]*|[0]" => {
+        <>.parse::<u32>().unwrap()
+    },
+}
+
+Identifier: String = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_string();

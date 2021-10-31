@@ -1,0 +1,21 @@
+[package]
+name = "tf"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Adam McDaniel",
+    "Vicky Chakpuang",
+    "Logan Wrinkle"
+]
+description = "A collection of the The Fuck? compiler tools to compile What? and assemble Why? and How?"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+lalrpop = { version = "0.19", features = ["lexer"] }
+
+[dependencies]
+comment = "0.1.1"
+lalrpop-util = "0.19"
+lalrpop = { version = "0.19", features = ["lexer"] }
+clap = "2.33"
