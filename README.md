@@ -24,5 +24,25 @@ cargo install -f --path .
 
 ```bash
 # Just run the `tf` executable!
-tf
+$ tf
+tf 0.1.0
+Adam McDaniel:Vicky Chakpuang:Logan Wrinkle
+A collection of the The Fuck? compiler tools to compile What? and assemble Why? and How?
+
+USAGE:
+    tf [FLAGS] [OPTIONS] <FILE>
+
+FLAGS:
+        --help       Prints help information
+    -h, --how        Assemble How brainfuck dialect
+                     (a 32-bit superset of brainfuck)
+    -V, --version    Prints version information
+    -w, --what       Compile What source
+    -y, --why        Assemble Why assembler
+
+OPTIONS:
+    -o <OUTPUT>        Optionally specify output file
+
+ARGS:
+    <FILE>    Input file
 ```
