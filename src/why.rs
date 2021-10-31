@@ -710,7 +710,7 @@ impl Op {
                 y.pop_into(program);
                 x.pop_into(program);
 
-                // do multiplication
+                // do division
                 TMP0.zero(program);
                 TMP1.zero(program);
                 TMP2.zero(program);
