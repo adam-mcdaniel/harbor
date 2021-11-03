@@ -101,9 +101,11 @@ pub enum Expr {
     Integer(u32),
     Bool(bool),
     Character(char),
+    None,
 
     Function(Vec<(String, Type)>, Type, Box<Self>),
     Let(String, Type, Box<Self>, Box<Self>),
+    LetInfer(String, Box<Self>, Box<Self>),
     Assign(String, Box<Self>),
     
     Call(String, Vec<Self>),
@@ -148,6 +150,7 @@ impl fmt::Display for Expr {
             Self::Integer(i) => write!(f, "{}", i),
             Self::Bool(x) => write!(f, "{}", x),
             Self::Character(ch) => write!(f, "{:?}", ch),
+            Self::None => write!(f, "()"),
 
             Self::Function(args, ret, body) => {
                 write!(f, "fn(")?;
@@ -157,8 +160,13 @@ impl fmt::Display for Expr {
                 write!(f, ") -> {} = {}", ret, body)
             }
 
+            
             Self::Let(name, t, val, ret) => {
                 write!(f, "let {}: {} = {} in {}", name, t, val, ret)
+            }
+            
+            Self::LetInfer(name, val, ret) => {
+                write!(f, "let {} = {} in {}", name, val, ret)
             }
 
             Self::Assign(name, val) => 
@@ -269,6 +277,7 @@ impl Expr {
                 Op::While(vec![item.compile(scope, offset)?], vec![expr.compile(scope, offset)?])
             }
 
+            Self::None => Op::Do(vec![]),
             Self::Integer(i) => Op::PushLiteral(Literal(*i)),
             Self::Bool(b) => Op::PushLiteral(Literal(*b as u32)),
             Self::Character(ch) => Op::PushLiteral(Literal(*ch as u8 as u32)),
@@ -448,6 +457,10 @@ impl Expr {
 
             }
 
+            Self::LetInfer(name, expr, body) => {
+                Self::Let(name.clone(), expr.get_type(scope)?, expr.clone(), body.clone()).compile(scope, offset)?
+            }
+
             Self::Call(name, args) => {
                 let mut result = vec![];
                 for arg in args {
@@ -547,6 +560,7 @@ impl Expr {
             }
 
             Self::Integer(_) => Type::Integer,
+            Self::None => Type::Void,
             Self::Bool(_) => Type::Bool,
             Self::Character(_) => Type::Character,
             
@@ -606,6 +620,9 @@ impl Expr {
                     return Err(Error::MismatchedTypes(self.clone(), t.clone(), val_type));
                 }
                 expr.get_type(&scope)?
+            }
+            Self::LetInfer(name, val, expr) => {
+                Self::Let(name.clone(), val.get_type(scope)?, val.clone(), expr.clone()).get_type(scope)?
             }
             Self::Assign(name, expr) => {
                 let var_type = scope.get(name).ok_or(Error::VariableNotInScope(name.clone()))?;

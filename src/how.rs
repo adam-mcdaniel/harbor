@@ -161,6 +161,12 @@ impl Program {
                 Op::Free => result += "!",
             }
         }
+        let mut next = result.clone();
+        next = next.replace("<>", "").replace("><", "");
+        while next != result {
+            result = next.clone();
+            next = next.replace("<>", "").replace("><", "");
+        }
         result
     }
 }
