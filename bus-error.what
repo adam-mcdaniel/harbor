@@ -1,0 +1,6 @@
+
+let ptr = alloc(0, (int, int)) in do
+    ptr[0] = (5, 6);
+    ptr[1] = (6, 7);
+    free(ptr);
+end
