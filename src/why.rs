@@ -75,8 +75,7 @@ pub fn function(mut args: Vec<(String, u32)>, ret_size: u32, code: Vec<Op>) -> O
         offset += size;
         result = Op::Let(name, vec![
             Op::LoadFrom(FP, 1),
-            Op::PushLiteral(Literal(args_size - offset)),
-            Op::Add,
+            Op::Increment(SP.deref(), args_size - offset),
         ], vec![result]);
     }
     
@@ -242,7 +241,7 @@ impl Location {
             SP.deref(),
             program
         );
-        SP.deref().zero(program);
+        // SP.deref().zero(program);
         SP.dec(program);
     }
 
@@ -375,8 +374,8 @@ pub enum Op {
     /// If statement
     If(Vec<Self>, Vec<Self>),
 
-    Increment(Location),
-    Decrement(Location),
+    Increment(Location, u32),
+    Decrement(Location, u32),
 
     /// Pop a value and push its logical not
     Not,
@@ -563,18 +562,7 @@ impl Op {
 
             Self::Stalloc(size) => {
                 if *size > 0 {
-                    copy_cell(
-                        TMP2,
-                        SP,
-                        program
-                    );
-                    TMP2.inc(program);
-    
-                    for _ in 0..*size {
-                        SP.inc(program);
-                        // SP.deref().zero(program);
-                    }
-                    TMP2.push(program);
+                    SP.plus(*size, program);
                 }
             }
 
@@ -590,7 +578,6 @@ impl Op {
 
             Self::Free => {
                 SP.deref().free(program);
-                SP.deref().zero(program);
                 SP.dec(program);
             }
 
@@ -600,12 +587,12 @@ impl Op {
                 TMP2.push(program);
             }
 
-            Self::Decrement(loc) => {
-                loc.dec(program);
+            Self::Decrement(loc, n) => {
+                loc.minus(*n, program)
             }
 
-            Self::Increment(loc) => {
-                loc.inc(program);
+            Self::Increment(loc, n) => {
+                loc.plus(*n, program)
             }
 
             Self::Not => {
@@ -799,33 +786,68 @@ impl Op {
                 TMP2.end_loop(program);
             }
 
-            Self::Neq => {
-                Self::Sub.assemble_with_scope(scope, program)?;
-            }
-
             Self::Eq => {
-                Self::Neq.assemble_with_scope(scope, program)?;
+                let x = TMP3;
+                let y = TMP2;
+                y.pop_into(program);
+                x.pop_into(program);
+
+                TMP0.zero(program);
+                TMP1.zero(program);
+
+                x.begin_loop(program);
+                TMP1.inc(program);
+                x.dec(program);
+                x.end_loop(program);
+                x.inc(program);
+
+                y.begin_loop(program);
+                TMP1.dec(program);
+                TMP0.inc(program);
+                y.dec(program);
+                y.end_loop(program);
+
+                TMP0.begin_loop(program);
+                y.inc(program);
+                TMP0.dec(program);
+                TMP0.end_loop(program);
+
+                TMP1.begin_loop(program);
+                x.dec(program);
+                TMP1.zero(program);
+                TMP1.end_loop(program);
+
+                x.push(program);
+            }
+            
+            Self::Neq => {
+                Self::Eq.assemble_with_scope(scope, program)?;
                 Self::Not.assemble_with_scope(scope, program)?;
+                // Self::Sub.assemble_with_scope(scope, program)?;
             }
 
             Self::Putnum => {
                 SP.deref().putnum(program);
-                SP.deref().zero(program);
+                // SP.deref().zero(program);
                 SP.dec(program);
             }
             Self::Getnum => {
-                TMP2.getnum(program);
-                TMP2.push(program);
+                // TMP2.getnum(program);
+                // TMP2.push(program);
+                SP.deref().offset(1).getnum(program);
+                SP.inc(program);
             }
 
             Self::Putchar => {
+                // SP.deref().zero(program);
                 SP.deref().put(program);
-                SP.deref().zero(program);
                 SP.dec(program);
             }
             Self::Getchar => {
-                TMP2.get(program);
-                TMP2.push(program);
+                // TMP2.get(program);
+                // TMP2.push(program);
+                SP.deref().offset(1).get(program);
+                SP.inc(program);
             }
 
             _ => unimplemented!()

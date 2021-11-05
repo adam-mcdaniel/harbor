@@ -56,7 +56,6 @@ AtomicExpr: Op = {
 
     "get" <Size> => Op::Do(vec![
         Op::Stalloc(<>),
-        Op::Pop(TMP2),
     ]),
     "dump" <Size> => Op::Stfree(<>),
 

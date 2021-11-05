@@ -1,0 +1,25 @@
+fn putnumln(n: int) -> void = 
+    do
+        putnum(n);
+        putchar('\n');
+    end
+in
+fn fact(n: int) -> int =
+    let acc: int = 1 in
+        do
+            while n != 0 do
+                acc = acc * n;
+                n = n - 1;
+            end;
+            acc;
+        end
+in
+fn test(x: &int) -> int = 
+    fact(*x)
+in
+    do
+        putnumln(let x = 7 in test(&x));
+        putchar('$');
+        putchar(' ');
+        putnumln(fact(getnum()));
+    end

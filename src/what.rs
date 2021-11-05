@@ -5,6 +5,52 @@ use core::fmt;
 use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(pub what_parser);
 
+fn assign_deref(addr: Expr, op: String, val: Expr) -> Expr {
+    let addr = Box::new(addr);
+    let val1 = Box::new(Expr::Deref(addr.clone()));
+    let val2 = Box::new(val);
+    Expr::DerefAssign(addr, Box::new(match op.as_str() {
+        "=" => *val2,
+        "+=" => Expr::Add(val1, val2),
+        "-=" => Expr::Sub(val1, val2),
+        "*=" => Expr::Mul(val1, val2),
+        "/=" => Expr::Div(val1, val2),
+        _ => unreachable!()
+    }))
+}
+
+fn assign_index(index: Expr, op: String, val: Expr) -> Expr {
+    let (ptr, idx) = match index.clone() {
+        Expr::Index(ptr, idx) => (ptr, idx),
+        _ => unreachable!()
+    };
+
+    let val1 = Box::new(index);
+    let val2 = Box::new(val);
+
+    Expr::IndexAssign(ptr, idx, Box::new(match op.as_str() {
+        "=" => *val2,
+        "+=" => Expr::Add(val1, val2),
+        "-=" => Expr::Sub(val1, val2),
+        "*=" => Expr::Mul(val1, val2),
+        "/=" => Expr::Div(val1, val2),
+        _ => unreachable!()
+    }))
+}
+
+fn assign_var(var: String, op: String, val: Expr) -> Expr {
+    let val1 = Box::new(Expr::Variable(var.clone()));
+    let val2 = Box::new(val);
+
+    Expr::Assign(var, Box::new(match op.as_str() {
+        "=" => *val2,
+        "+=" => Expr::Add(val1, val2),
+        "-=" => Expr::Sub(val1, val2),
+        "*=" => Expr::Mul(val1, val2),
+        "/=" => Expr::Div(val1, val2),
+        _ => unreachable!()
+    }))
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
@@ -13,6 +59,7 @@ pub enum Error {
     MismatchedTypes(Expr, Type, Type),
     SizeOfFunction(Type),
     DerefNonPointer(Expr, Type),
+    NthOfNonTuple(Expr, Type),
 
     ParseError(String),
     WhyError(why::Error)
@@ -26,6 +73,7 @@ impl fmt::Display for Error {
             Self::MismatchedTypes(expr, expected, found) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mmismatched types: expected `{}` but found `{}` in expression `{}`", expected, found, expr),
             Self::SizeOfFunction(t) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mattempted to get the size of a function with signature `{}`: are you trying to assign functions to a value?", t),
             Self::DerefNonPointer(expr, t) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mdereferenced non-pointer type `{}` in expression `{}`", t, expr),
+            Self::NthOfNonTuple(expr, t) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mmember of non-tuple type `{}` in expression `{}`", t, expr),
 
             Self::ParseError(e) => write!(f, "\x1b[91merror: \x1b[m\x1b[0m\n{}", e),
             Self::WhyError(e) => write!(f, "{}", e)
@@ -57,6 +105,7 @@ pub enum Type {
     Void,
 
     Pointer(Box<Self>),
+    Tuple(Vec<Self>),
 
     // Tuple(Vec<Self>),
     Function(Vec<Self>, Box<Self>),
@@ -65,6 +114,13 @@ pub enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Tuple(items) => {
+                write!(f, "(")?;
+                for item in items {
+                    write!(f, "{}, ", item)?
+                }
+                write!(f, ")")
+            },
             Self::Integer => write!(f, "int"),
             Self::Bool => write!(f, "bool"),
             Self::Character => write!(f, "char"),
@@ -84,15 +140,39 @@ impl fmt::Display for Type {
 impl Type {
     fn get_size(&self) -> Result<u32, Error> {
         Ok(match self {
-            Type::Integer
-            | Type::Bool
-            | Type::Character => 1,
-            Type::Void => 0,
-            Type::Pointer(_) => 1,
-            Type::Function(_, _) => {
+            Self::Integer
+            | Self::Bool
+            | Self::Character => 1,
+            Self::Void => 0,
+            Self::Pointer(_) => 1,
+            Self::Function(_, _) => {
                 return Err(Error::SizeOfFunction(self.clone()))
             }
+            Self::Tuple(items) => {
+                let mut size = 0;
+                for item in items {
+                    size += item.get_size()?;
+                }
+                size
+            }
         })
+    }
+
+    fn nth(&self, n: u32) -> Option<(&Self, u32)> {
+        if let Self::Tuple(items) = self {
+            if (n as usize) < items.len() {
+                let mut size_before = 0;
+                for i in 0..n {
+                    size_before += items[i as usize].get_size().ok()?;
+                }
+
+                Some((&items[n as usize], size_before))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -101,20 +181,28 @@ pub enum Expr {
     Integer(u32),
     Bool(bool),
     Character(char),
+    None,
 
     Function(Vec<(String, Type)>, Type, Box<Self>),
     Let(String, Type, Box<Self>, Box<Self>),
+    LetInfer(String, Box<Self>, Box<Self>),
     Assign(String, Box<Self>),
     
     Call(String, Vec<Self>),
     Variable(String),
-    // Reference(String),
-    // Dereference(String),
-    // Tuple(Vec<Self>),
-    // Nth(Box<Self>, usize),
+    Increment(String),
+    Decrement(String),
+
     Refer(String),
     Deref(Box<Self>),
     DerefAssign(Box<Self>, Box<Self>),
+
+    Tuple(Vec<Self>),
+    Nth(Box<Self>, u32),
+    
+    ReferIndex(Box<Self>, Box<Self>),
+    Index(Box<Self>, Box<Self>),
+    IndexAssign(Box<Self>, Box<Self>, Box<Self>),
 
     Add(Box<Self>, Box<Self>),
     Sub(Box<Self>, Box<Self>),
@@ -145,9 +233,22 @@ pub enum Expr {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Increment(name) => write!(f, "{}++", name),
+            Self::Decrement(name) => write!(f, "{}--", name),
+
             Self::Integer(i) => write!(f, "{}", i),
             Self::Bool(x) => write!(f, "{}", x),
             Self::Character(ch) => write!(f, "{:?}", ch),
+            Self::Tuple(items) => {
+                write!(f, "(")?;
+                for item in items {
+                    write!(f, "{}, ", item)?
+                }
+                write!(f, ")")
+            },
+            Self::Nth(tup, n) => write!(f, "{}.{}", tup, n),
+
+            Self::None => write!(f, "()"),
 
             Self::Function(args, ret, body) => {
                 write!(f, "fn(")?;
@@ -157,8 +258,13 @@ impl fmt::Display for Expr {
                 write!(f, ") -> {} = {}", ret, body)
             }
 
+            
             Self::Let(name, t, val, ret) => {
                 write!(f, "let {}: {} = {} in {}", name, t, val, ret)
+            }
+            
+            Self::LetInfer(name, val, ret) => {
+                write!(f, "let {} = {} in {}", name, val, ret)
             }
 
             Self::Assign(name, val) => 
@@ -176,6 +282,10 @@ impl fmt::Display for Expr {
             Self::Refer(name) => write!(f, "&{}", name),
             Self::Deref(val) => write!(f, "*{}", val),
             Self::DerefAssign(val, new_val) => write!(f, "*{} = {}", val, new_val),
+
+            Self::Index(ptr, idx) => write!(f, "{}[{}]", ptr, idx),
+            Self::ReferIndex(ptr, idx) => write!(f, "&{}[{}]", ptr, idx),
+            Self::IndexAssign(ptr, idx, val) => write!(f, "{}[{}] = {}", ptr, idx, val),
 
             Self::Add(lhs, rhs) => write!(f, "{} + {}", lhs, rhs),
             Self::Sub(lhs, rhs) => write!(f, "{} - {}", lhs, rhs),
@@ -218,6 +328,58 @@ impl Expr {
     pub fn compile(&self, scope: &BTreeMap<String, Type>, offset: &mut u32) -> Result<Op, Error> {
         self.type_check(scope)?;
         Ok(match self {
+            Self::Tuple(items) => {
+                let mut result = vec![];
+                for item in items {
+                    result.push(item.compile(scope, offset)?)
+                }
+                Op::Do(result)
+            }
+
+            Self::Increment(name) => {
+                Op::Do(vec![
+                    Expr::Refer(name.clone()).compile(scope, offset)?,
+                    Op::Increment(SP.deref().deref(), 1),
+                    // Op::Load(Type::Integer.get_size()?)
+                    Op::Stfree(1),
+                ])
+            }
+            
+            Self::Decrement(name) => {
+                Op::Do(vec![
+                    Expr::Refer(name.clone()).compile(scope, offset)?,
+                    Op::Decrement(SP.deref().deref(), 1),
+                    // Op::Load(Type::Integer.get_size()?)
+                    Op::Stfree(1),
+                ])
+            }
+
+            Self::Nth(tup, n) => {
+                let tup_type = tup.get_type(scope)?;
+                let tup_size = tup_type.get_size()?;
+                if let Some((item_type, size_before)) = tup_type.nth(*n) {
+                    let item_size = item_type.get_size()?;
+                    Op::Do(vec![
+                        tup.compile(scope, offset)?,
+                        Op::PushLiteral(Literal(tup_size)),
+                        Op::Alloc,
+                        Op::Duplicate,
+                        Op::StoreAt(R1, 1),
+                        Op::Store(tup_size),
+
+                        Op::LoadFrom(R1, 1),
+                        Op::PushLiteral(Literal(size_before)),
+                        Op::Add,
+                        Op::Load(item_size),
+                        
+                        Op::LoadFrom(R1, 1),
+                        Op::Free,
+                    ])
+                } else {
+                    return Err(Error::NthOfNonTuple(self.clone(), tup_type))
+                }
+            }
+
             Self::Refer(name) => {
                 Op::Macro(name.clone())
             }
@@ -240,6 +402,46 @@ impl Expr {
                 ])
             }
 
+            Self::Index(ptr, idx) => {
+                let ptr_type = ptr.get_type(scope)?;
+                if let Type::Pointer(t) = ptr_type {
+                    Self::Deref(
+                        Box::new(Self::Add(ptr.clone(), Box::new(Self::Mul(
+                            idx.clone(),
+                            Box::new(Self::Integer(t.get_size()?)),
+                        ))))
+                    ).compile(scope, offset)?
+                } else {
+                    return Err(Error::DerefNonPointer(self.clone(), ptr_type));
+                }
+            }
+
+            Self::ReferIndex(ptr, idx) => {
+                let ptr_type = ptr.get_type(scope)?;
+                if let Type::Pointer(t) = ptr_type {
+                    Self::Add(ptr.clone(), Box::new(Self::Mul(
+                        Box::new(Self::Integer(t.get_size()?)),
+                        idx.clone(),
+                    ))).compile(scope, offset)?
+                } else {
+                    return Err(Error::DerefNonPointer(self.clone(), ptr_type));
+                }
+            }
+
+            Self::IndexAssign(ptr, idx, val) => {
+                let ptr_type = ptr.get_type(scope)?;
+                if let Type::Pointer(t) = ptr_type {
+                    Self::DerefAssign(
+                        Box::new(Self::Add(ptr.clone(), Box::new(Self::Mul(
+                            Box::new(Self::Integer(t.get_size()?)),
+                            idx.clone(),
+                        )))),
+                        val.clone()
+                    ).compile(scope, offset)?
+                } else {
+                    return Err(Error::DerefNonPointer(self.clone(), ptr_type));
+                }
+            }
 
             Self::Block(items) => {
                 let mut ops = vec![];
@@ -269,6 +471,7 @@ impl Expr {
                 Op::While(vec![item.compile(scope, offset)?], vec![expr.compile(scope, offset)?])
             }
 
+            Self::None => Op::Do(vec![]),
             Self::Integer(i) => Op::PushLiteral(Literal(*i)),
             Self::Bool(b) => Op::PushLiteral(Literal(*b as u32)),
             Self::Character(ch) => Op::PushLiteral(Literal(*ch as u8 as u32)),
@@ -285,6 +488,9 @@ impl Expr {
                 x.compile(scope, offset)?,
                 Op::PushLiteral(Literal(t.get_size()?)),
                 Op::Mul,
+                // Op::Increment(SP.deref()),
+                // Op::Duplicate,
+                // Op::Putnum,
                 Op::Alloc
             ]),
             Self::Free(x) => Op::Do(vec![
@@ -414,6 +620,7 @@ impl Expr {
     
                     let result_type = body.get_type(&scope)?;
                     let result_size = result_type.get_size()?;
+
                     let result = Op::Let(name.clone(), vec![
                         Op::LoadFrom(FP, 1),
                         Op::PushLiteral(Literal(this_offset)),
@@ -422,7 +629,6 @@ impl Expr {
                         // Allocate space on the stack to
                         // store the value
                         Op::Stalloc(size),
-                        Op::Pop(TMP2),
                         // Store the value
                         expr_result,
                         Op::Macro(name.clone()),
@@ -430,22 +636,33 @@ impl Expr {
 
                         body_result,
 
-                        Op::PushLiteral(Literal(result_size)),
-                        Op::Alloc,
-                        Op::Duplicate,
-                        Op::StoreAt(R0, 1),
-                        Op::Store(result_size),
-                        Op::Stfree(size),
-
-                        Op::LoadFrom(R0, 1),
-                        Op::Load(result_size),
-                        Op::LoadFrom(R0, 1),
-                        Op::Free,
-                        // Op::Decrement(SP)
+                        Op::Do(if result_size > 0 {
+                            vec![
+                                Op::PushLiteral(Literal(result_size)),
+                                Op::Alloc,
+                                Op::Duplicate,
+                                Op::StoreAt(R2, 1),
+                                Op::Store(result_size),
+                                Op::Stfree(size),
+        
+                                Op::LoadFrom(R2, 1),
+                                Op::Load(result_size),
+                                Op::LoadFrom(R2, 1),
+                                Op::Free,
+                            ]
+                        } else {
+                            vec![
+                                Op::Stfree(size),
+                            ]
+                        })
                     ]);
                     result
                 }
 
+            }
+
+            Self::LetInfer(name, expr, body) => {
+                Self::Let(name.clone(), expr.get_type(scope)?, expr.clone(), body.clone()).compile(scope, offset)?
             }
 
             Self::Call(name, args) => {
@@ -474,6 +691,32 @@ impl Expr {
                 Type::Pointer(Box::new(t.clone()))
             }
 
+            Self::Increment(name) | Self::Decrement(name) => {
+                let var_type = scope.get(name).ok_or(Error::VariableNotInScope(name.clone()))?;
+                
+                if *var_type != Type::Integer {
+                    return Err(Error::MismatchedTypes(self.clone(), Type::Integer, var_type.clone()));
+                }
+                Type::Void
+            }
+
+            Self::Tuple(items) => {
+                let mut item_types = vec![];
+                for item in items {
+                    item_types.push(item.get_type(scope)?)
+                }
+                Type::Tuple(item_types)
+            }
+
+            Self::Nth(tup, n) => {
+                let tup_type = tup.get_type(scope)?;
+                if let Some((t, _)) = tup_type.nth(*n) {
+                    t.clone()
+                } else {
+                    return Err(Error::NthOfNonTuple(self.clone(), tup_type))
+                }
+            }
+
             Self::Free(x) => {
                 let x_type = x.get_type(scope)?;
                 if let Type::Pointer(t) = x_type {
@@ -481,6 +724,49 @@ impl Expr {
                     Type::Void
                 } else {
                     return Err(Error::MismatchedTypes(self.clone(), Type::Pointer(Box::new(Type::Void)), x_type));
+                }
+            }
+
+            Self::Index(ptr, idx) => {
+                let ptr_type = ptr.get_type(scope)?;
+                let idx_type = idx.get_type(scope)?;
+                if let Type::Pointer(val) = ptr_type {
+                    if idx_type != Type::Integer {
+                        return Err(Error::MismatchedTypes(self.clone(), Type::Integer, idx_type))
+                    }
+                    *val
+                } else {
+                    return Err(Error::DerefNonPointer(self.clone(), ptr_type))   
+                }
+            }
+
+            Self::ReferIndex(ptr, idx) => {
+                let ptr_type = ptr.get_type(scope)?;
+                let idx_type = idx.get_type(scope)?;
+                if let Type::Pointer(_) = ptr_type {
+                    if idx_type != Type::Integer {
+                        return Err(Error::MismatchedTypes(self.clone(), Type::Integer, idx_type))
+                    }
+                    ptr_type
+                } else {
+                    return Err(Error::DerefNonPointer(self.clone(), ptr_type))   
+                }
+            }
+
+            Self::IndexAssign(ptr, idx, val) => {
+                let ptr_type = ptr.get_type(scope)?;
+                let idx_type = idx.get_type(scope)?;
+                let val_type = val.get_type(scope)?;
+                if let Type::Pointer(ptr_val_type) = ptr_type {
+                    if idx_type != Type::Integer {
+                        return Err(Error::MismatchedTypes(self.clone(), Type::Integer, idx_type))
+                    }
+                    if val_type != *ptr_val_type {
+                        return Err(Error::MismatchedTypes(self.clone(), *ptr_val_type, val_type))
+                    }
+                    Type::Void
+                } else {
+                    return Err(Error::DerefNonPointer(self.clone(), ptr_type))   
                 }
             }
 
@@ -547,6 +833,7 @@ impl Expr {
             }
 
             Self::Integer(_) => Type::Integer,
+            Self::None => Type::Void,
             Self::Bool(_) => Type::Bool,
             Self::Character(_) => Type::Character,
             
@@ -606,6 +893,9 @@ impl Expr {
                     return Err(Error::MismatchedTypes(self.clone(), t.clone(), val_type));
                 }
                 expr.get_type(&scope)?
+            }
+            Self::LetInfer(name, val, expr) => {
+                Self::Let(name.clone(), val.get_type(scope)?, val.clone(), expr.clone()).get_type(scope)?
             }
             Self::Assign(name, expr) => {
                 let var_type = scope.get(name).ok_or(Error::VariableNotInScope(name.clone()))?;
@@ -671,7 +961,7 @@ impl Expr {
 
             Self::Putnum(x) => {
                 let x_type = x.get_type(scope)?;
-                if x_type != Type::Integer {
+                if x_type != Type::Integer && !matches!(x_type, Type::Pointer(_)) {
                     return Err(Error::MismatchedTypes(self.clone(), Type::Integer, x_type));
                 }
                 Type::Void

@@ -1,5 +1,6 @@
 use crate::what::*;
 
+
 grammar;
 
 match {
@@ -35,7 +36,8 @@ match {
     "$",
     "&",
     "true",
-    "false"
+    "false",
+    "for"
 } else {
     r"[a-zA-Z_][a-zA-Z0-9_]*"
 } else {
@@ -66,12 +68,110 @@ MulOrDiv: String = {
 
 pub What: Expr = Expr => <>;
 
+Block: Expr = {
+    "do" <items: (Expr ";")*> <last: (Expr ";"?)> "end" => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<Expr>>();
+        items.push(last.0);
+        Expr::Block(items)
+    }
+};
+
+Index: Expr = {
+    <mut ptr:AtomicExpr> <idxs:("[" AndOrOrExpr "]")+> => {
+        for (_, idx, _) in idxs {
+            ptr = Expr::Index(Box::new(ptr), Box::new(idx))
+        }
+        ptr
+    }
+}
+
+Dot: String = {
+    "." => <>.to_string(),
+    "->" => <>.to_string(),
+}
+
+Method: Expr = {
+    <val:SimpleExpr> <calls:(Dot Identifier ("(" List<Expr> ")")?)+> => {
+        let mut result = val;
+        for (dot, name, args) in calls {
+            if dot == "->" {
+                result = Expr::Deref(Box::new(result))
+            }
+            result = if let Some((_, args, _)) = args {
+                let mut new_args = vec![result];
+                new_args.extend(args);
+                Expr::Call(name, new_args)
+            } else {
+                Expr::Call(name, vec![result])
+            }
+        }
+        result
+    },
+    <mut tup:SimpleExpr> <idxs:(Dot Num)+> => {
+        for (dot, n) in idxs {
+            if dot == "->" {
+                tup = Expr::Deref(Box::new(tup))
+            }
+            tup = Expr::Nth(Box::new(tup), n)
+        }
+        tup
+    }
+}
+
+Let: Expr = {
+    "let" <mut defs: NonEmptyList<(Identifier (":" Type)? "=" Expr)>> "in" <body: Expr> => {
+        let mut result = body;
+        while let Some((name, t, _, expr)) = defs.pop() {
+            result = if let Some((_, t)) = t {
+                Expr::Let(name, t, Box::new(expr), Box::new(result))
+            } else {
+                Expr::LetInfer(name, Box::new(expr), Box::new(result))
+            }
+        }
+        result
+    }
+}
+
+AssignOp: String = {
+    "=" => <>.to_string(),
+    "+=" => <>.to_string(),
+    "-=" => <>.to_string(),
+    "*=" => <>.to_string(),
+    "/=" => <>.to_string(),
+}
+
 Expr: Expr = {
-    "while" <cond: AndOrOrExpr> "do" <body: (Expr ";")+> "end"=> Expr::While(Box::new(cond), Box::new(Expr::Block(body.into_iter().map(|e| e.0).collect()))),
-    "if" <cond: AndOrOrExpr> "do" <body: (Expr ";")+> "end" => Expr::If(Box::new(cond), Box::new(Expr::Block(body.into_iter().map(|e| e.0).collect()))),
-    "let" <var: Identifier> ":" <t:Type> "=" <value: Expr> "in" <body: Expr> "end" => Expr::Let(var, t, Box::new(value), Box::new(body)),
-    "*" <addr:AtomicExpr> "=" <value: Expr> => Expr::DerefAssign(Box::new(addr), Box::new(value)),
-    <var: Identifier> "=" <value: Expr> => Expr::Assign(var, Box::new(value)),
+    "while" <cond: AndOrOrExpr> <body: Block> => Expr::While(
+        Box::new(cond),
+        Box::new(Expr::Block(vec![
+            body,
+            Expr::None
+        ]))
+    ),
+    "for" "(" <first: Expr> ";" <cond: AndOrOrExpr> ";" <next: Expr> ")" <body: Block> => {
+        Expr::Block(vec![
+            first,
+            Expr::While(
+                Box::new(cond),
+                Box::new(Expr::Block(vec![
+                    body,
+                    next,
+                    Expr::None
+                ]))
+            )
+        ])
+    },
+    "if" <cond: AndOrOrExpr> <body: Block> => Expr::If(
+        Box::new(cond),
+        Box::new(Expr::Block(vec![
+            body,
+            Expr::None
+        ]))
+    ),
+    Let => <>,
+    "*" <addr: AtomicExpr> <op: AssignOp> <value: Expr> => assign_deref(addr, op, value),
+    <index: Index> <op: AssignOp> <value: Expr> => assign_index(index, op, value),
+    <var: Identifier> <op: AssignOp> <value: Expr> => assign_var(var, op, value),
     "fn" <var: Identifier> "(" <args:List<(Identifier ":" AtomicType)>> ")" "->" <ret_type:Type> "=" <body:Expr> "in" <result:Expr> => {
         let mut arg_names = vec![];
         let mut arg_types = vec![];
@@ -150,10 +250,11 @@ MulDivExpr: Expr = {
             }
         }
         head
-    }
+    },
 }
 
 ComplexExpr: Expr = {
+    Method => <>,
     "*" <ComplexExpr> => Expr::Deref(Box::new(<>)),
     SimpleExpr => <>,
 }
@@ -162,10 +263,22 @@ SimpleExpr: Expr = {
     "putchar" "(" <Expr> ")" => Expr::Putchar(Box::new(<>)),
     "putnum" "(" <Expr> ")" => Expr::Putnum(Box::new(<>)),
     "alloc" "(" <n:Expr> "," <t:Type> ")" => Expr::Alloc(Box::new(n), t),
+    "alloc" "(" <t:Type> ")" => Expr::Alloc(Box::new(Expr::Integer(1)), t),
     "free" "(" <Expr> ")" => Expr::Free(Box::new(<>)),
     "getchar" "(" ")" => Expr::Getchar,
     "getnum" "(" ")" => Expr::Getnum,
     <name:Identifier> "(" <args:List<Expr>> ")" => Expr::Call(name, args),
+    "&" <idx: Index> => {
+        match idx {
+            Expr::Index(ptr, idx) => Expr::ReferIndex(ptr, idx),
+            _ => unreachable!()
+        }
+    },
+    "&" <Identifier> => Expr::Refer(<>),
+    <Identifier> "++" => Expr::Increment(<>),
+    <Identifier> "--" => Expr::Decrement(<>),
+
+    Index => <>,
     AtomicExpr => <>,
 }
 
@@ -173,10 +286,11 @@ AtomicExpr: Expr = {
     <Num> => Expr::Integer(<>),
     <Bool> => Expr::Bool(<>),
     <Char> => Expr::Character(<>),
+    "(" ")" => Expr::None,
     <Identifier> => Expr::Variable(<>),
-    "&" <Identifier> => Expr::Refer(<>),
     "(" <Expr> ")" => <>,
-    "do" <block:(Expr ";")+> "end" => Expr::Block(<>.into_iter().map(|e| e.0).collect()),
+    Tuple => <>,
+    Block => <>,
 }
 
 Type: Type = {
@@ -189,16 +303,45 @@ AtomicType: Type = {
     "bool" => Type::Bool,
     "char" => Type::Character,
     "void" => Type::Void,
+    "(" <items: (AtomicType ",")+> <last: AtomicType?> ")" => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
+        if let Some(last) = last {
+            items.push(last);
+        }
+        Type::Tuple(items)
+    }
 }
 
 
 List<T>: Vec<T> = {
+    <items: (T ",")*> <last: T?> => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
+        if let Some(last) = last {
+            items.push(last);
+        }
+        items
+    }
+}
+
+NonEmptyList<T>: Vec<T> = {
     <items: (T ",")*> <last: T> => {
         let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
         items.push(last);
         items
     }
 }
+
+Tuple: Expr = {
+    "(" <items: (Expr ",")+> <last: Expr?> ")" => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
+        if let Some(last) = last {
+            items.push(last);
+        }
+        Expr::Tuple(items)
+    }
+}
+
+
 
 
 Str: String = <s:r#""(\\.|[^"])*""#> => String::from(&s[1..s.len()-1]).replace("\\\"", "\"").replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t").replace("\\0", "\0");
