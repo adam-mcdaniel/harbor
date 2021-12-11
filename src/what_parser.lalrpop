@@ -262,9 +262,21 @@ ComplexExpr: Expr = {
 SimpleExpr: Expr = {
     "putchar" "(" <Expr> ")" => Expr::Putchar(Box::new(<>)),
     "putnum" "(" <Expr> ")" => Expr::Putnum(Box::new(<>)),
-    "alloc" "(" <n:Expr> "," <t:Type> ")" => Expr::Alloc(Box::new(n), t),
-    "alloc" "(" <t:Type> ")" => Expr::Alloc(Box::new(Expr::Integer(1)), t),
-    "free" "(" <Expr> ")" => Expr::Free(Box::new(<>)),
+    <s:Str> => {
+        let mut chars: Vec<Expr> = s.chars().map(Expr::Character).collect();
+        chars.push(Expr::Character('\0'));
+        Expr::Alloc(Box::new(Expr::Integer(chars.len() as u32)), Type::Character, Some(chars))
+    },
+    "alloc" "(" <n:Expr> "," <t:Type> "," "[" <default:List<Expr>> "]" ")" => Expr::Alloc(Box::new(n), t, Some(default)),
+    "alloc" "(" <n:Expr> "," <t:Type> ")" => Expr::Alloc(Box::new(n), t, None),
+    "alloc" "(" <t:Type> ")" => Expr::Alloc(Box::new(Expr::Integer(1)), t, None),
+    "free" "(" <NonEmptyList<Expr>> ")" => Expr::Block({
+        let mut result = vec![];
+        for item in <> {
+            result.push(Expr::Free(Box::new(item)));
+        }
+        result
+    }),
     "getchar" "(" ")" => Expr::Getchar,
     "getnum" "(" ")" => Expr::Getnum,
     <name:Identifier> "(" <args:List<Expr>> ")" => Expr::Call(name, args),

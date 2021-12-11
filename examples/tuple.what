@@ -76,19 +76,22 @@ fn move(p: (int, int), dx: int, dy: int) -> (int, int) = (p.0 + dx, p.1 + dy) in
 
 // Do stuff!
 let x = (1, 2, (3, 4)) in do
-    let count = 10,
+    let count = 5,
         points = alloc(count, (int, int)),
         i = 0
     in
         do
-            for (i = 0; count != i; i++) do
+            putnumln(1);
+            for (i = 0; i!=count; i++) do
                 points[i] = (i + i, i * i);
             end;
 
-            for (i = 0; count != i; i++) do
+            putnumln(2);
+            for (i = 0; i!=count; i++) do
                 points[i].putpointln();
             end;
-            
+
+            putnumln(3);
             test((5, 6), ('a', 'b', (true, 'c')));
 
             free(points)

@@ -73,6 +73,12 @@ impl Program {
         self.0.push(Op::Comment('\n'));
     }
 
+    pub fn zero(&mut self) {
+        self.0.push(Op::Loop);
+        self.0.push(Op::Minus(1));
+        self.0.push(Op::End);
+    }
+
     pub fn plus(&mut self, n: u32) {
         self.0.push(Op::Plus(n));
     }
@@ -137,10 +143,10 @@ impl Program {
         self.0.push(Op::Getnum);
     }
 
-    pub fn assemble(&self) -> String {
+    pub fn assemble(self) -> String {
         let mut result = String::new();
-        for op in &self.0 {
-            match *op {
+        for op in self.optimize() {
+            match op {
                 Op::Comment(c) => result.push(c),
                 Op::Plus(n) => result += &"+".repeat(n as usize),
                 Op::Minus(n) => result += &"-".repeat(n as usize),
@@ -161,13 +167,42 @@ impl Program {
                 Op::Free => result += "!",
             }
         }
-        let mut next = result.clone();
-        next = next.replace("<>", "").replace("><", "");
-        while next != result {
-            result = next.clone();
-            next = next.replace("<>", "").replace("><", "");
-        }
         result
+    }
+
+    pub fn optimize(self) -> Self {
+        Self(self.0.into_iter().fold(vec![], 
+            |mut result, this| {
+                if result.is_empty() {
+                    result.push(this);
+                    return result;
+                }
+                let last_i = result.len()-1;
+                let last = &mut result[last_i];
+                match (&last.clone(), &this) {
+                    (Op::Plus(n), Op::Plus(m)) => *last = Op::Plus(*n + *m),
+                    (Op::Minus(n), Op::Minus(m)) => *last = Op::Minus(*n + *m),
+
+                    (Op::Plus(n), Op::Minus(m))
+                    | (Op::Minus(m), Op::Plus(n)) if *n >= *m => *last = Op::Plus(*n - *m),
+
+                    (Op::Plus(n), Op::Minus(m))
+                    | (Op::Minus(m), Op::Plus(n)) if *n < *m => *last = Op::Minus(*m - *n),
+                    
+                    (Op::Right(n), Op::Right(m)) => *last = Op::Right(*n + *m),
+                    (Op::Left(n), Op::Left(m)) => *last = Op::Left(*n + *m),
+
+                    (Op::Right(n), Op::Left(m))
+                    | (Op::Left(m), Op::Right(n)) if *n >= *m => *last = Op::Right(*n - *m),
+
+                    (Op::Right(n), Op::Left(m))
+                    | (Op::Left(m), Op::Right(n)) if *n < *m => *last = Op::Left(*m - *n),
+                    
+                    _ => result.push(this)
+                }
+                result
+            }
+        ))
     }
 }
 
@@ -198,8 +233,16 @@ impl From<&str> for Program {
     }
 }
 
+impl IntoIterator for Program {
+    type Item = Op;
+    type IntoIter = std::vec::IntoIter<Op>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl fmt::Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.assemble())
+        write!(f, "{}", self.clone().assemble())
     }
 }

@@ -219,7 +219,7 @@ pub enum Expr {
     Putnum(Box<Self>),
 
     Free(Box<Self>),
-    Alloc(Box<Self>, Type),
+    Alloc(Box<Self>, Type, Option<Vec<Self>>),
 
     Block(Vec<Self>),
 
@@ -304,7 +304,17 @@ impl fmt::Display for Expr {
             Self::Getchar => write!(f, "getchar()"),
             Self::Getnum => write!(f, "getnum()"),
 
-            Self::Alloc(n, t) => write!(f, "alloc({}, {})", n, t),
+            Self::Alloc(n, t, vals) => {
+                if let Some(vals) = vals {
+                    write!(f, "alloc({}, {}, [", n, t)?;
+                    for val in vals {
+                        write!(f, "{}, ", val)?;
+                    }
+                    write!(f, "])")
+                } else {
+                    write!(f, "alloc({}, {})", n, t)
+                }
+            },
             Self::Free(x) => write!(f, "free({})", x),
 
             Self::Block(block) => {
@@ -484,14 +494,31 @@ impl Expr {
                 x.compile(scope, offset)?,
                 Op::Putnum
             ]),
-            Self::Alloc(x, t) => Op::Do(vec![
+            Self::Alloc(x, t, vals) => Op::Do(vec![
                 x.compile(scope, offset)?,
                 Op::PushLiteral(Literal(t.get_size()?)),
                 Op::Mul,
                 // Op::Increment(SP.deref()),
                 // Op::Duplicate,
                 // Op::Putnum,
-                Op::Alloc
+                Op::Alloc,
+                Op::Do(if let Some(vals) = vals {
+                    let mut result = vec![Op::StoreAt(R3, 1)];
+                    let mut size = 0;
+                    for val in vals {
+                        size += val.get_type(scope)?.get_size()?;
+                        result.push(val.compile(scope, offset)?)
+                    }
+                    result.extend([
+                        Op::LoadFrom(R3, 1),
+                        Op::Store(size),
+                        Op::LoadFrom(R3, 1),
+                    ]);
+
+                    result
+                } else {
+                    vec![]
+                })
             ]),
             Self::Free(x) => Op::Do(vec![
                 x.compile(scope, offset)?,
@@ -570,16 +597,16 @@ impl Expr {
 
             Self::Eq(a, b) => {
                 Op::Do(vec![
-                    a.compile(scope, offset)?,
                     b.compile(scope, offset)?,
+                    a.compile(scope, offset)?,
                     Op::Eq
                 ])
             }
 
             Self::Neq(a, b) => {
                 Op::Do(vec![
-                    a.compile(scope, offset)?,
                     b.compile(scope, offset)?,
+                    a.compile(scope, offset)?,
                     Op::Neq
                 ])
             }
@@ -683,10 +710,18 @@ impl Expr {
 
     fn get_type(&self, scope: &BTreeMap<String, Type>) -> Result<Type, Error> {
         Ok(match self {
-            Self::Alloc(n, t) => {
+            Self::Alloc(n, t, vals) => {
                 let count_type = n.get_type(scope)?;
                 if count_type != Type::Integer {
                     return Err(Error::MismatchedTypes(self.clone(), Type::Integer, count_type));
+                }
+                if let Some(vals) = vals {
+                    for val in vals {
+                        let val_type = val.get_type(scope)?;
+                        if &val_type != t {
+                            return Err(Error::MismatchedTypes(self.clone(), t.clone(), val_type));
+                        }
+                    }
                 }
                 Type::Pointer(Box::new(t.clone()))
             }

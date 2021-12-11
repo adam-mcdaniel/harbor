@@ -1,25 +1,44 @@
+fn pass() -> void = () in
+
 // Get a line of user input and store it in a buffer
 fn input(buf: &char) -> void =
     let ch = getchar(),
         i = 0
     in
         do
-            for (ch != '\n' && ch != '\0'; i = i + 1) do
-                *(buf + i) = ch;
+            for ((); ch != '\n' && ch != '\0'; i++) do
+                buf[i] = ch;
                 ch = getchar();
             end;
-            *(buf + i) = '\0';
+            buf[i] = '\0';
         end
 in
     
 // Print a newline
 fn putln() -> void = putchar('\n') in
 
+fn putnumln(n: int) -> void = do
+    putnum(n); putln()
+end in
+
+fn streq(a: &char, b: &char) -> bool = do
+    let i = 0, result = true in do
+        for ((); a[i] == b[i] && a[i] != '\0'; i++) do
+            pass()
+        end;
+        if a[i] != b[i] do
+            result = false;
+        end;
+        result
+    end
+end in
+
+
 // Print a string
 fn putstr(s: &char) -> void =
     let i = 0 in
-        for (*(s + i) != '\0'; i = i + 1) do
-            putchar(*(s + i));
+        for ((); s[i] != '\0'; i++) do
+            putchar(s[i]);
         end
 in
 
@@ -29,8 +48,20 @@ fn putstrln(s: &char) -> void = do
     putln()
 end in
 
+fn fputstr(s: &char) -> void = do
+    putstr(s);
+    free(s)
+end in
+
+fn fputstrln(s: &char) -> void = do
+    putstrln(s);
+    free(s)
+end in
+
     // Allocate some memory and read user input to it
     let buf = alloc(256, char) in do
+        fputstrln("Hello world!");
+
         putchar('$');
         putchar(' ');
         input(buf);
@@ -38,7 +69,9 @@ end in
         putchar('-');
         putchar('>');
         putchar(' ');
-        putstr(buf);
+
+        fputstrln(buf);
+
         putchar('!');
-        putln()
+        putln();
     end

@@ -186,6 +186,7 @@ impl Location {
     pub fn free(&self, program: &mut Program) {
         self.to(program);
         program.free();
+        program.zero();
         self.from(program);
     }
 

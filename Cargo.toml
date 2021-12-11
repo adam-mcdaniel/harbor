@@ -8,7 +8,7 @@ authors = [
     "Logan Wrinkle",
     "Cade Walker"
 ]
-description = "A collection of the The Fuck? compiler tools to compile What? and assemble Why? and How?"
+description = "A collection of the compiler tools for a high level language that compiles to brainfuck."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -2,7 +2,7 @@ use tf::{what, why, how};
 use std::collections::BTreeMap;
 use clap::{clap_app, crate_authors, crate_version, crate_description, AppSettings::ArgRequiredElseHelp};
 
-fn compile_what(code: impl ToString) -> Result<String, what::Error>{
+fn compile_what(code: impl ToString) -> Result<how::Program, what::Error>{
     let mut program = how::Program::default();
     use why::*;
     SP.set(why::TOTAL_REGISTERS, &mut program);
@@ -12,7 +12,7 @@ fn compile_what(code: impl ToString) -> Result<String, what::Error>{
     let w = w.compile(&BTreeMap::new(), &mut 0)?;
     match w.assemble(&mut program) {
         Ok(()) => {
-            Ok(program.to_string())
+            Ok(program.optimize())
         }
         Err(e) => {
             Err(what::Error::WhyError(e))
@@ -50,28 +50,29 @@ fn assemble_why(code: impl ToString) -> Result<String, why::Error>{
 
     let w = why::parse(code)?;
     w.assemble_with_scope(&scope, &mut program)?;
-    Ok(program.to_string())
+    Ok(program.optimize().to_string())
 }
 
-fn assemble_how(code: impl ToString) -> String {
-    let code = code.to_string();
+fn assemble_how(code: how::Program) -> String {
     let mut result = String::from("#include <stdio.h>\n#include <stdlib.h>\n\n#define TAPE_SIZE 30000\nvoid panic(char *msg) {\n    fprintf(stderr, \"panic: %s\\n\", msg);\n    exit(-1);\n}\nvoid print_tape(unsigned int *tape, unsigned int *taken_cells, unsigned int size) { for (unsigned int i = 0; i < size; i++) { printf(\"%u \", tape[i]); } printf(\"\\n\"); int unfreed = 0; for (unsigned int i=0; i < TAPE_SIZE; i++) {unfreed += taken_cells[i]; i += taken_cells[i];} printf(\"%d unfreed\\n\", unfreed); }\nunsigned int allocate(unsigned int *tape, unsigned int ptr, unsigned int *taken_cells) {\n    unsigned int requested_mem = tape[ptr];\n    unsigned int consecutive_zero_cells = 0;\n    for (int i=TAPE_SIZE-1; i>0; i--) {\n        if (taken_cells[i] == 0) {\n            consecutive_zero_cells++;\n        } else {\n            consecutive_zero_cells = 0;\n        }\n        if (consecutive_zero_cells >= requested_mem) {\n            unsigned int addr = i;\n            for (int j=0; j<requested_mem; j++) {\n                taken_cells[addr + j] = requested_mem - j;\n            }\n            return addr;\n        }\n    }\n    panic(\"no free memory\");\n}\nvoid free_mem(unsigned int *tape, unsigned int ptr, unsigned int *taken_cells) {\n    unsigned int address = tape[ptr];\n    unsigned int size = taken_cells[address];\n\n    for (int i=0; i<size; i++) {\n        taken_cells[address+i] = 0;\n        tape[address+i] = 0;\n    }\n}\nvoid zero(unsigned int *tape) {\n    for (int i = 0; i < TAPE_SIZE; i++) tape[i] = 0;\n}\nint main() {\n    unsigned int tape[TAPE_SIZE], taken_cells[TAPE_SIZE], ref_tape[256]; \n    unsigned int ptr = 0, ref_ptr = 0;\n    zero(tape);\n    zero(taken_cells);\n");
-    for op in code.to_string().chars() {
+    use how::Op;
+    for op in code.optimize() {
         match op {
-            '+' => result.push_str("tape[ptr]++;"),
-            '-' => result.push_str("tape[ptr]--;"),
-            '>' => result.push_str("ptr++;"),
-            '<' => result.push_str("ptr--;"),
-            '[' => result.push_str("while (tape[ptr]) {"),
-            ']' => result.push_str("}"),
-            ',' => result.push_str("tape[ptr] = getchar();"),
-            '.' => result.push_str("putchar(tape[ptr]);"),
-            '#' => result.push_str("scanf(\"%d\", &tape[ptr]);"),
-            '$' => result.push_str("printf(\"%d\", tape[ptr]);"),
-            '*' => result.push_str("ref_tape[ref_ptr++] = ptr; ptr = tape[ptr];"),
-            '&' => result.push_str("ptr = ref_tape[--ref_ptr];"),
-            '?' => result.push_str("tape[ptr] = allocate(tape, ptr, taken_cells);"),
-            '!' => result.push_str("free_mem(tape, ptr, taken_cells);"),
+            Op::Plus(n) if n > 0 => result += &format!("tape[ptr]+={};", n),
+            Op::Minus(n) if n > 0 => result += &format!("tape[ptr]-={};", n),
+            Op::Right(n) if n > 0 => result += &format!("ptr+={};", n),
+            Op::Left(n) if n > 0 => result += &format!("ptr-={};", n),
+            Op::Loop => result.push_str("while (tape[ptr]) {"),
+            Op::End => result.push_str("}"),
+            Op::Get => result.push_str("tape[ptr] = getchar();"),
+            Op::Put => result.push_str("putchar(tape[ptr]);"),
+            Op::Getnum => result.push_str("scanf(\"%d\", &tape[ptr]);"),
+            Op::Putnum => result.push_str("printf(\"%d\", tape[ptr]);"),
+            Op::Deref => result.push_str("ref_tape[ref_ptr++] = ptr; ptr = tape[ptr];"),
+            Op::Refer => result.push_str("ptr = ref_tape[--ref_ptr];"),
+            Op::Alloc => result.push_str("tape[ptr] = allocate(tape, ptr, taken_cells);"),
+            Op::Free => result.push_str("free_mem(tape, ptr, taken_cells);"),
+            Op::Comment(comment) => result += &format!("\n// {}\n", comment),
             _ => {}
         }
     }
@@ -86,8 +87,9 @@ fn main() {
         (about: crate_description!())
 
         (@group input =>
-            (@arg what: -w --what "Compile What source")
-            (@arg why:  -y --why  "Assemble Why assembler")
+            (@arg c: -c --c    "Compile What source to C")
+            (@arg what: -w --what "Compile What source to How")
+            (@arg why:  -y --why  "Assemble Why assembler to How")
             (@arg how:  -h --how  "Assemble How brainfuck dialect\n(a 32-bit superset of brainfuck)")
         )
         (@arg FILE: +required "Input file")
@@ -109,10 +111,18 @@ fn main() {
                     }
                 }
             } else if matches.is_present("how") {
-                assemble_how(contents)
+                assemble_how(how::Program::from(contents.as_str()).optimize())
+            } else if matches.is_present("what") {
+                match compile_what(contents) {
+                    Ok(s) => s.to_string(),
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        return;
+                    }
+                }
             } else {
                 match compile_what(contents) {
-                    Ok(s) => s,
+                    Ok(s) => assemble_how(s),
                     Err(e) => {
                         eprintln!("{}", e);
                         return;
