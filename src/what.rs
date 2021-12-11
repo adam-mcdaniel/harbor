@@ -569,19 +569,37 @@ impl Expr {
             }
 
             Self::Eq(a, b) => {
-                Op::Do(vec![
-                    a.compile(scope, offset)?,
-                    b.compile(scope, offset)?,
-                    Op::Eq
-                ])
+                if **b == Self::Integer(0) {
+                    Op::Do(vec![
+                        a.compile(scope, offset)?,
+                        Op::Not
+                    ])
+                } else if **a == Self::Integer(0) {
+                    Op::Do(vec![
+                        b.compile(scope, offset)?,
+                        Op::Not
+                    ])
+                } else {
+                    Op::Do(vec![
+                        a.compile(scope, offset)?,
+                        b.compile(scope, offset)?,
+                        Op::Eq
+                    ])
+                }
             }
 
             Self::Neq(a, b) => {
-                Op::Do(vec![
-                    a.compile(scope, offset)?,
-                    b.compile(scope, offset)?,
-                    Op::Neq
-                ])
+                if **b == Self::Integer(0) {
+                    a.compile(scope, offset)?
+                } else if **a == Self::Integer(0) {
+                    b.compile(scope, offset)?
+                } else {
+                    Op::Do(vec![
+                        a.compile(scope, offset)?,
+                        b.compile(scope, offset)?,
+                        Op::Neq
+                    ])
+                }
             }
 
             Self::Variable(name) => {
@@ -658,7 +676,6 @@ impl Expr {
                     ]);
                     result
                 }
-
             }
 
             Self::LetInfer(name, expr, body) => {

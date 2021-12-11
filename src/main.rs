@@ -86,6 +86,7 @@ fn main() {
         (about: crate_description!())
 
         (@group input =>
+            (@arg c: -c "Compile What source to C")
             (@arg what: -w --what "Compile What source")
             (@arg why:  -y --why  "Assemble Why assembler")
             (@arg how:  -h --how  "Assemble How brainfuck dialect\n(a 32-bit superset of brainfuck)")
@@ -110,7 +111,7 @@ fn main() {
                 }
             } else if matches.is_present("how") {
                 assemble_how(contents)
-            } else {
+            } else if matches.is_present("what") {
                 match compile_what(contents) {
                     Ok(s) => s,
                     Err(e) => {
@@ -118,7 +119,16 @@ fn main() {
                         return;
                     }
                 }
+            } else {
+                match compile_what(contents) {
+                    Ok(s) => assemble_how(s),
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        return;
+                    }
+                }
             };
+
 
             if let Some(output_file) = matches.value_of("OUTPUT") {
                 std::fs::write(output_file, compile_result).unwrap();
