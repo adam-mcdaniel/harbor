@@ -23,9 +23,9 @@
 
 <div align="center">
   <a href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Chess in the terminal" src="./assets/machine.png" width="29.75%"/>
+    <img alt="Chess in the terminal" src="./assets/interpreter.gif" width="31.5%"/>
   </a>
   <a href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Chess in the web" src="./assets/fib.png" width="69%"/>
+    <img alt="Chess in the web" src="./assets/fib.png" width="67%"/>
   </a>
 </div>
