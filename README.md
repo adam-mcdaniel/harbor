@@ -126,7 +126,7 @@ HIR provides a typesystem and performs typechecking, MIR provides a small untype
 
 The most interesting part of the compilation process is the transition from Harbor MIR to Dynamic Brainfuck. Harbor MIR looks like this:
 
-<img alt="MIR" src="./assets/fib_mir.png" style="float: left; width: 48.05%"/><img alt="Fib DBF" src="./assets/fib_dbf.png" style="float: right; width: 47.90%"/>
+<img alt="MIR" src="./assets/fib_mir.png" style="float: left; width: 48.05%"/><img alt="Fib DBF" src="./assets/fib_dbf.png" style="float: right; width: 47.85%"/>
 
 ### Memory Layout
 
