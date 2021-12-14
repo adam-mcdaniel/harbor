@@ -178,10 +178,10 @@ There are also 6 predefined macros for MIR. `putnum` and `putchar` both pop a ce
 MIR opcodes are composed of a sort of "microcode" that's really interesting and fun to write/optimize. The code generator for the addition opcode illustrates this pretty well:
 
 <div align="center">
-  <img alt="Addition" src="./assets/addition.png" style="float: left; width: 28%"/>
-  <div align="center">
-    <img alt="Algorithm" src="./assets/add_algorithm.png" style="float: top"/>
-    <img alt="Memory" src="./assets/add.svg" style="float: bottom"/>
+  <img alt="Addition" src="./assets/addition.png" style="float: left; width: 40%"/>
+  <div align="center" style="30%">
+    <img alt="Algorithm" src="./assets/add_algorithm.png" style="float: top; width: 40%"/>
+    <img alt="Memory" src="./assets/add.svg" style="float: bottom; width: 40%"/>
   </div>
 </div>
 
