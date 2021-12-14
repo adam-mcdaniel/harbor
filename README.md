@@ -116,7 +116,7 @@ Dynamic Brainf*** provides six additional operators: two for memory management, 
 |#|Make the current cell equal to the next integer in the input buffer (like `scanf("%d", &tape[pointer])`).|
 |$|Output the current cell as an integer (like `printf("%d", tape[pointer])`).|
 
-To give you some perspective on just how little Dynamic Brainf\*\*\* adds, ***the code responsible for assembling Dynamic Brainf\*\*\* in this compiler is just 24 lines long!*** 
+To give you some perspective on just how little Dynamic Brainf\*\*\* adds, ***the code responsible for assembling Dynamic Brainf\*\*\* in this compiler is just 24 lines long!*** You can write a compiler for it just using string replacement!
 
 ## How does it work?
 
@@ -135,18 +135,18 @@ The most interesting part of the compilation process is the transition from Harb
 MIR provides 14 registers:
 - `SP`: the stack pointer.
 - `FP`: the frame pointer.
-- `TMP0` through `TMP5`: 6 temporary registers for helping with arithmetic operations. These are for the compiler only.
+- `TMP0` through `TMP5`: 6 temporary registers for helping with arithmetic operations. These are compiler only.
 - `R0` through `R5`: 6 general purpose registers for the user.
 
 The registers are statically allocated by the compiler at the first 14 cells, with the stack beginning immediately after.
 
 <img alt="Registers" align="center" src="./assets/registers.svg"/>
 
-You might notice that `FP` strangely comes after `TMP0` and `TMP1`, but before `TMP2`. There's a good reason for this: copying memory cells in Brainf*** dialects is a *very expensive* (and very frequent) operation. When memory is copied, it uses `TMP0` as a buffer for the assignment code:
+You might notice that `FP` strangely comes after `TMP0` and `TMP1`, but before `TMP2`. There's a good reason for this: copying memory cells in Brainf*** dialects is a *very expensive* (and very frequent) operation. When memory is copied, it uses `TMP0` as a buffer:
 
 <img alt="Copy Cell" align="center" src="./assets/copy_cell.png"/>
 
-So, `TMP0` is placed before `FP` to increase locality, but I'm sure the effect is negligible. `TMP1` is also placed before `FP` for similar reasons: it's used frequently in almost all alrithmetic operations. `TMP2` through `TMP5` are more specialized registers, mainly used for integer division, multiplication, and setting up stack frames and activation records for functions.
+So, `TMP0` is placed before `FP` to increase locality (it takes fewer cycles to shift the pointer to `TMP0`), but I'm sure the effect is negligible. `TMP1` is also placed before `FP` for similar reasons: it's used frequently in almost all alrithmetic operations. `TMP2` through `TMP5` are more specialized registers, mainly used for integer division, multiplication, and setting up stack frames and activation records for functions.
 
 ### MIR Opcodes
 
@@ -214,6 +214,18 @@ With this syntax, scopes are explicitly created and destructed upon individual e
 ![Method](./assets/method.png)
 
 Because method calls are just syntax sugar for function calls, the user needs an alternative way to pass the "self" parameter as a pointer. To do this, I increased the precedence of `&` to take place before the `.` operator. So, in the example above, the expression `&n.inc.square->putnumln` expands to `putnumln(*square(inc(&n)))`. I know this syntax looks confusing to anyone familiar with pointers, but it's impossible to misuse due to the strict typesystem.
+
+## The Recursion Problem
+
+<img alt="Basic Blocks" src="./assets/basicblock.png" style="float: right"/>
+
+This seems to be the only area where Harbor really lacks in its domain. The way the compiler is constructed, it is basically impossible to implement recursion in a sane way.
+
+In a language like Brainf\*\*\*, where the only method of control flow is looping, implementing functions with scopes is difficult enough: it's exceedingly hard to simulate function calls and frames without any mechanism for jumping to an arbitrary instruction.
+
+***This can be accomplished***, however using a technique where code blocks are divided into "basic blocks": code without any jumps inbetween the beginning and end. This simplifies the structure of the program such that jumps don't occur in the middle of execution: *control flow only needs to be monitored and managed between basic blocks, which can easily be done with traditional if statements and while loops!*
+
+Unfortunately, though, I was not aware of this solution at the time I implemented most of the compiler, and implementing it probably would have taken far too long anyways. The important thing to note is that ***it is possible*** to compile recursive, functional code to Dynamic Brainf***.
 
 ## Exercises for the reader
 
