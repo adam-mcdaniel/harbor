@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Dynamic Brainfuck</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+        crossorigin="anonymous"></script>
+
+    <meta name="description" content="Extended Brainfuck Compiler and Interpreter." />
+    <meta name="theme-color" content="#ffffff">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- <link rel="stylesheet" href="css/ebf.css" /> -->
+    <!-- <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet"> -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@200&family=Roboto:wght@300&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-size: 20px;
+            font-family: 'Roboto', sans-serif;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        ul#tape {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0;
+            padding: 0;
+            width: 15em;
+        }
+
+        ul#tape li {
+            list-style-type: none;
+            border: 1px solid #aeaeae;
+            float: left;
+            width: 12.5%;
+            height: 12.5%;
+            text-align: center;
+            padding-top: 7px;
+            color: gray;
+        }
+
+        .cm-s-base16-light.CodeMirror {
+            background: #f5f5f5;
+            color: #202020
+        }
+
+        .cm-s-base16-light div.CodeMirror-selected {
+            background: #a0a0a0
+        }
+
+        .cm-s-base16-light .CodeMirror-line::selection,
+        .cm-s-base16-light .CodeMirror-line>span::selection,
+        .cm-s-base16-light .CodeMirror-line>span>span::selection {
+            background: #a0a0a0
+        }
+
+        .cm-s-base16-light .CodeMirror-line::-moz-selection,
+        .cm-s-base16-light .CodeMirror-line>span::-moz-selection,
+        .cm-s-base16-light .CodeMirror-line>span>span::-moz-selection {
+            background: #a0a0a0
+        }
+
+        .cm-s-base16-light .CodeMirror-gutters {
+            background: #f5f5f5;
+            border-right: 0
+        }
+
+        .cm-s-base16-light .CodeMirror-guttermarker {
+            color: #ac4142
+        }
+
+        .cm-s-base16-light .CodeMirror-guttermarker-subtle {
+            color: #b0b0b0
+        }
+
+        .cm-s-base16-light .CodeMirror-linenumber {
+            color: #b0b0b0
+        }
+
+        .cm-s-base16-light .CodeMirror-cursor {
+            border-left: 1px solid #505050
+        }
+
+        .cm-s-base16-light span.cm-comment {
+            color: #8f5536
+        }
+
+        .cm-s-base16-light span.cm-atom {
+            color: #aa759f
+        }
+
+        .cm-s-base16-light span.cm-number {
+            color: #aa759f
+        }
+
+        .cm-s-base16-light span.cm-attribute,
+        .cm-s-base16-light span.cm-property {
+            color: #90a959
+        }
+
+        .cm-s-base16-light span.cm-keyword {
+            color: #ac4142
+        }
+
+        .cm-s-base16-light span.cm-string {
+            color: #f4bf75
+        }
+
+        .cm-s-base16-light span.cm-variable {
+            color: #90a959
+        }
+
+        .cm-s-base16-light span.cm-variable-2 {
+            color: #6a9fb5
+        }
+
+        .cm-s-base16-light span.cm-def {
+            color: #d28445
+        }
+
+        .cm-s-base16-light span.cm-bracket {
+            color: #202020
+        }
+
+        .cm-s-base16-light span.cm-tag {
+            color: #ac4142
+        }
+
+        .cm-s-base16-light span.cm-link {
+            color: #aa759f
+        }
+
+        .cm-s-base16-light span.cm-error {
+            background: #ac4142;
+            color: #505050
+        }
+
+        .cm-s-base16-light .CodeMirror-activeline-background {
+            background: #dddcdc
+        }
+
+        .cm-s-base16-light .CodeMirror-matchingbracket {
+            color: #f5f5f5 !important;
+            background-color: #6a9fb5 !important
+        }
+    </style>
+
+    <!-- <link rel="stylesheet" href="codemirror/lib/codemirror.css"> -->
+    <!-- <script src="codemirror/lib/codemirror.js"></script> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.64.0/codemirror.min.css"
+        integrity="sha512-CCnciBUnVXwa6IQT9q8EmGcarNit9GdKI5nJnj56B1iu0LuD13Qn/GZ+IUkrZROZaBdutN718NK6mIXdUjZGqg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.64.0/codemirror.min.js"
+        integrity="sha512-4DlmQ+aBOfYTZ3uzRKCDXdyL7y8IlopnVChhXG0pRFgyvhwONVQW3JX8e5DYoXUNr3evQpLZz7S3O1XxMH4WKA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.64.0/addon/edit/matchbrackets.min.js"
+        integrity="sha512-03Ei8A+mDhwF6O/CmXM47U4A9L7TobAxMbPV2Wn5cEbY76lngHQRyvvmnqhJ8IthfoxrRqmtoBxQCxOC7AOeKw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+    <script>
+        (function (mod) {
+            mod(CodeMirror)
+        })(function (CodeMirror) {
+            "use strict"
+            var reserve = "><+-.,[]*&!?#$".split("");
+            CodeMirror.defineMode("brainfuck", function () {
+                return {
+                    startState: function () {
+                        return {
+                            commentLine: false,
+                            left: 0,
+                            right: 0,
+                            commentLoop: false
+                        }
+                    },
+                    token: function (stream, state) {
+                        if (stream.eatSpace()) return null
+                        if (stream.sol()) {
+                            state.commentLine = false;
+                        }
+                        var ch = stream.next().toString();
+                        if (reserve.indexOf(ch) !== -1) {
+                            if (ch === "[" || ch === "]") {
+                                if (ch === "[") {
+                                    state.left++;
+                                } else {
+                                    state.right++;
+                                }
+                                return "bracket";
+                            } else if (ch === "+" || ch === "-") {
+                                return "keyword";
+                            } else if (ch === "!" || ch === "?" || ch === "*" || ch === "&") {
+                                return "variable-2";
+                            } else if (ch === "<" || ch === ">") {
+                                return "number";
+                            } else if (ch === "." || ch === "," || ch === "#" || ch === "$") {
+                                return "def";
+                            } else {
+                                return "comment";
+                            }
+                        }
+                        else {
+                            state.commentLine = true;
+                            if (stream.eol()) {
+                                state.commentLine = false;
+                            }
+                            return "comment";
+                        }
+                        if (stream.eol()) {
+                            state.commentLine = false;
+                        }
+                    }
+                };
+            });
+            CodeMirror.defineMIME("text/x-brainfuck", "brainfuck")
+        });
+    </script>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.64.0/theme/paraiso-light.min.css" integrity="sha512-xb7HM7Q7s3Lm0LSzMGAOkUYJR/7tDmIYf3nEpJ85LECOEehenge0dbpIJqW8mrxMLCcQzwU7N6y/R7TzGCu7iA==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+    <!-- <script src="codemirror/addon/edit/matchbrackets.js"></script>
+    <script src="codemirror/mode/brainfuck/brainfuck.js"></script>
+    <link rel="stylesheet" href="codemirror/theme/paraiso-light.css"> -->
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg">
+                <br />
+                <h1><u>Dynamic Brainfuck</u></h1>
+                <br />
+    
+                <p>
+                    The <a target="_blank" href="https://www.youtube.com/watch?v=hdHjjBS4cs8"
+                        style="color: black;"><u><i>Brainfuck programming language</i></u></a> is arguably the most portable
+                    programming language of all time due to its simplicity.
+                    Brainfuck uses only <i>eight</i> operators and a tape of 8 bit cells to function: it's turing complete,
+                    but impossible to read or use practically. Here is the exhaustive list of operators and their descriptions.
+                </p>
+                </p>
+                <table class="table table-sm table-responsive table-hover" style="font-size:17px;">
+                    <thead>
+                        <tr>
+                            <th scope="col">Operator</th>
+                            <th scope="col">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">&lt;</th>
+                            <td>Move the pointer one cell to the right.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">&gt;</th>
+                            <td>Move the pointer one cell to the right.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">+</th>
+                            <td>Increment the current cell by 1.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">-</th>
+                            <td>Decrement the current cell by 1.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">[</th>
+                            <td>Begin a loop while the cell at the pointer is not zero.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">]</th>
+                            <td>Mark the ending of a loop body.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">,</th>
+                            <td>Make the current cell equal to the next byte of input.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">.</th>
+                            <td>Output the current cell as a byte.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <br />
+                <u><i>Dynamic Brainfuck</i></u> is a dialect of Brainfuck with six additional operators: 2 for
+                dynamic memory management, 2 for emulating pointers and references, and 2 for better IO.
+                Because of the additional operators, <a href="https://github.com/adam-mcdaniel/tf" style="color: black"
+                    target="_blank"><i>it is possible to use Dynamic Brainfuck as a target for a compiled high level
+                        language.</i></a>
+                <br />
+                <br />
+                <table class="table table-sm table-responsive table-hover" style="font-size:17px;">
+                    <thead>
+                        <tr>
+                            <th scope="col">Operator</th>
+                            <th scope="col">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">?</th>
+                            <td>Read the value of the current cell, and allocate that many cells at the end of the tape.
+                                Then, set the current cell's value equal to the index of first cell in that allocated block.
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">&excl;</th>
+                            <td>Read the value of the current cell, and free the allocated cells starting at that index.
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">*</th>
+                            <td>Push the pointer to a stack, and set the pointer equal to the value of the current cell.
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">&amp;</th>
+                            <td>Pop the old pointer off the dereference stack, and set the pointer equal to it.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">#</th>
+                            <td>Make the current cell equal to the next integer in the input buffer.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">$</th>
+                            <td>Output the current cell as an integer.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+    
+            <div class="col-lg">
+                <br />
+                <br />
+                <div>
+                    <p><i>Machine controls</i></p>
+                    <div class="input-group mb-3">
+                        <label class="input-group-text" for="program">Program</label>
+                        <select id="program" class="form-select" oninput="demo()">
+                            <option value="Hello World">Hello World</option>
+                            <option value="Fibonacci">Fibonacci</option>
+                            <option value="Factorial">Factorial</option>
+                            <option value="Cat">Cat</option>
+                            <option value="Cell Size">Cell Size</option>
+                            <option value="Square">Square</option>
+                            <option value="Sum">Sum</option>
+                            <option value="Product">Product</option>
+                        </select>
+                    </div>
+    
+                    <div class="input-group mb-3">
+                        <label class="input-group-text" for="run-button">Commands</label>
+                        <button type="button" class="btn btn-primary" id="run-button" onclick="run()">Run</button>
+                        <button type="button" class="btn btn-warning" onclick="pause()">Pause</button>
+                        <button type="button" class="btn btn-primary" onclick="step()">Step</button>
+                        <button type="button" class="btn btn-danger" onclick="reset()">Reset</button>
+                    </div>
+                    <div class="input-group mb-3">
+                        <label class="input-group-text" for="delay">Delay</label>
+                        <label class="input-group-text" id="delay-value"></label>
+                    </div>
+                    <div style="padding-left: 1em; padding-right: 1em;">
+                        <input type="range" class="form-range" min="0" max="800" value="50" id="delay"
+                            oninput="setslider()">
+                    </div>
+    
+                </div>
+    
+                <p><i>Machine memory</i></p>
+                <section id="machine">
+                    <ul id="tape"></ul>
+                </section>
+    
+                <p><i>Input</i></p>
+                <input type="text" id="input" name="input" />
+    
+                <p><i>Output</i></p>
+                <pre id="output" style="background-color: lightgrey;"></pre>
+    
+                <p><i>Program</i></p>
+                <div style="height: 28em;">
+                    <textarea id="code"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br/>
+    <br/>
+    <script>
+        const TAPE_SIZE = 64;
+        var paused = false;
+        var interval_id = null;
+
+        var pointer = 0;
+        var program_counter = 0;
+        var input_pointer = 0;
+
+        var taken_cells = [];
+
+        var loop_stack = [];
+        var ref_stack = [];
+
+        function setslider() {
+            var slider = document.getElementById("delay");
+            function bound(bounds) {
+                for (var i = 1; i < bounds.length; i++) {
+                    var l = bounds[i - 1];
+                    var h = bounds[i];
+                    if (slider.value > l && slider.value < h) {
+                        if (slider.value > h / 2) {
+                            slider.value = h;
+                        } else {
+                            slider.value = l;
+                        }
+                    }
+                }
+            }
+
+            bound([1, 50, 100, 300, 800]);
+            document.getElementById('delay-value').innerHTML = slider.value + " ms";
+        }
+        setslider();
+
+        function demo() {
+            reset();
+            switch (document.getElementById("program").value) {
+                case "Hello World":
+                    document.getElementById("delay").value = 50;
+                    setslider();
+                    editor.setValue("+++++ +++++  initialize counter to 10\n\
+[            use loop to set 70/100/30/10\n\
+    > +++++ ++     add  7 to cell 1\n\
+    > +++++ +++++  add 10 to cell 2\n\
+    > +++          add  3 to cell 3\n\
+    > +            add  1 to cell 4\n\
+<<<< -   decrement counter (cell 0)\n\
+]\n\
+> ++ .                  print 'H'\n\
+> + .                   print 'e'\n\
++++++ ++ .              print 'l'\n\
+.                       print 'l'\n\
++++ .                   print 'o'\n\
+> ++ .                  print ' '\n\
+<< +++++ +++++ +++++ .  print 'W'\n\
+> .                     print 'o'\n\
++++ .                   print 'r'\n\
+----- - .               print 'l'\n\
+----- --- .             print 'd'\n\
+> + .\n\
+> .                     print 'eol'");
+                    document.getElementById("input").value = "";
+                    break;
+                case "Fibonacci":
+                    document.getElementById("delay").value = 0;
+                    setslider();
+                    document.getElementById("input").value = "10";
+                    editor.setValue("[-]++++++++++++++>>>[-]++++++++++++++<<<+*#&+*[-]&*+&*?&>[-]<*>[-]<&*[&*>+<&>+<*-&*]&>[<*+&>-]<+>[-]>>>>>>[-]<<<<<<<*[&>>>>>>>+<<<<<<+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-][-]>>[-]<<<[>>>+<<+<-]>[<+>-]>>+<<<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-][-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-]<*![-]&-++*[-]&*&+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-++*[-]&*+&+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*++&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-++*[-]&*&+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+++&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*[&-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*++&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+*[-]&*+&*?&>[-]<*>[-]<&*[&*>+<&>+<*-&*]&>[<*+&>-]<+>[-]>>>>>>[-]<<<<<<<*[&>>>>>>>+<<<<<<+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-][-]>>[-]<<<[>>>+<<+<-]>[<+>-]>>+<<<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-][-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-]<*![-]&-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*$&-+*[-]&*++++++++++&*.&-->[-]>>[-]<<<*[&>>>+<<+<*-&*]&>[<*+&>-]<->>>>>>>[-]<<<<<<<+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+++&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*++&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+++&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*++&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-][-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*++&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+*[-]&*+&>[-]<*[&*<->&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*]&----->[-]>>[-]<<<*[&>>>+<<+<*-&*]&>[<*+&>-]<->>>>>>>[-]<<<<<<<");
+                    break;
+                case "Factorial":
+                    document.getElementById("delay").value = 0;
+                    setslider();
+                    document.getElementById("input").value = "6";
+                    editor.setValue("[-]++++++++++++++>>>[-]++++++++++++++<<<+*#&+*[-]&*+&*?&>[-]<*>[-]<&*[&*>+<&>+<*-&*]&>[<*+&>-]<+>[-]>>>>>>[-]<<<<<<<*[&>>>>>>>+<<<<<<+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-][-]>>[-]<<<[>>>+<<+<-]>[<+>-]>>+<<<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-][-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-]<*![-]&-++*[-]&*+&+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*[&-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-][-]>[-]<<*<[>&>>+<<*<->&*<]>&>>[<<*[&*<+>&>+<*-&*]&>[<*+&>-]>-]<<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+*[-]&*+&>[-]<*[&*<->&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*]&-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*+&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+*[-]&*+&*?&>[-]<*>[-]<&*[&*>+<&>+<*-&*]&>[<*+&>-]<+>[-]>>>>>>>>>[-]<<<<<<<<<<*[&>>>>>>>>>>+<<<<<<<<<+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<--+>[-]<*[-]&>>>>>>>>>>[<<<<<<<<<<*+&>+>>>>>>>>>-]<<<<<<<<<[>>>>>>>>>+<<<<<<<<<-][-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>>>>>>>>[<<<<<<<<<<*+&>+>>>>>>>>>-]<<<<<<<<<[>>>>>>>>>+<<<<<<<<<-]<*![-]&-+*[-]&*+&*?&>[-]<*>[-]<&*[&*>+<&>+<*-&*]&>[<*+&>-]<+>[-]>>>>>>[-]<<<<<<<*[&>>>>>>>+<<<<<<+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-->[-]>>[-]<<<*[&>>>+<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-][-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-]<*![-]&->>>>>>>[-]<<<<<<<+*[-]&*+&*?&>[-]<*>[-]<&*[&*>+<&>+<*-&*]&>[<*+&>-]<+>[-]>>>>>>[-]<<<<<<<*[&>>>>>>>+<<<<<<+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-][-]>>[-]<<<[>>>+<<+<-]>[<+>-]>>+<<<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-][-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>>>>>[<<<<<<<*+&>+>>>>>>-]<<<<<<[>>>>>>+<<<<<<-]<*![-]&-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<*&>[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*$&-+*[-]&*++++++++++&*.&-->[-]>>[-]<<<*[&>>>+<<+<*-&*]&>[<*+&>-]<->>>>>>>[-]<<<<<<<");
+                    break;
+                case "Cat":
+                    document.getElementById("delay").value = 0;
+                    setslider();
+                    document.getElementById("input").value = "this is a cat program!\u{1F408}";
+                    editor.setValue("[-]++++++++++++++>>>[-]++++++++++++++<<<++*,&+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*[&-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*.&-+*,&+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<*]&--");
+                    break;
+                case "Cell Size":
+                    document.getElementById("delay").value = 0;
+                    setslider();
+                    document.getElementById("input").value = "";
+                    editor.setValue("Calculate the value 256 and test if it's zero\n\
+If the interpreter errors on overflow this is where it'll happen\n\
+++++++++[>++++++++<-]>[<++++>-]\n\
++<[>-<\n\
+    Not zero so multiply by 256 again to get 65536\n\
+    [>++++<-]>[<++++++++>-]<[>++++++++<-]\n\
+    +>[>\n\
+        Print \"32\"\n\
+        ++++++++++[>+++++<-]>+.-.[-]<\n\
+    <[-]<->] <[>>\n\
+        Print \"16\"\n\
+        +++++++[>+++++++<-]>.+++++.[-]<\n\
+<<-]] >[>\n\
+    Print \"8\"\n\
+    ++++++++[>+++++++<-]>.[-]<\n\
+<-]<\n\
+Print \" bit cells\\n\"\n\
++++++++++++[>+++>+++++++++>+++++++++>+<<<<-]>-.>-.+++++++.+++++++++++.<.\n\
+>>.++.+++++++..<-.>>-\n\
+Clean up used cells.\n\
+[[-]<]");
+                    break;
+                case "Square":
+                    document.getElementById("delay").value = 1;
+                    setslider();
+                    document.getElementById("input").value = "6";
+                    editor.setValue("[-]++++++++++++++>>>[-]++++++++++++++<<<++*#&+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-->[-]<*>*[-]&<&*[&*>*+&<&>+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-]<+>[-]<*[-]&>>>[<<<*+&>+>>-]<<[>>+<<-]<+*[-]&*&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<->[-]>>>[-]<<<<*[&>>>>+<<<+<*-&*]&>[<*+&>-]<-+>[-]<*[-]&>>>>*[&<<<<*+&>+>>>*-&*]&<<<[>>>*+&<<<-][-]>[-]<<*<[>&>>+<<*<->&*<]>&>>[<<*[&*<+>&>+<*-&*]&>[<*+&>-]>-]<<-*$&--");
+                    break;
+                case "Sum":
+                    document.getElementById("delay").value = 1;
+                    setslider();
+                    document.getElementById("input").value = "12 25";
+                    editor.setValue("[-]++++++++++++++>>>[-]++++++++++++++<<<+*#&+*#&>[-]<*[&*<+>&>+<*-&*]&>[<*+&>-]<-*$&-");
+                    break;
+                case "Product":
+                    document.getElementById("delay").value = 50;
+                    setslider();
+                    document.getElementById("input").value = "4 5";
+                    editor.setValue("[-]++++++++++++++>>>[-]++++++++++++++<<<+*#&+*#&>[-]>[-]<<*<[>&>>+<<*<->&*<]>&>>[<<*[&*<+>&>+<*-&*]&>[<*+&>-]>-]<<-*$&-");
+                    break;
+            }
+        }
+
+        function new_cell() {
+            var tape = document.getElementById("tape");
+            var cell = document.createElement('li');
+            tape.appendChild(cell);
+            cell.innerHTML = '0';
+            taken_cells.push(0);
+        }
+
+        function highlight_cell() {
+            var tape = document.getElementById("tape");
+            tape.children[pointer].style.color = 'white';
+            tape.children[pointer].style.backgroundColor = 'black';
+        }
+
+        var tape = document.getElementById('tape');
+        for (var i = 0; i < TAPE_SIZE; i++) {
+            new_cell();
+        }
+        const DEFAULT_STYLE = tape.children[pointer].style;
+        highlight_cell();
+
+        function pause() {
+            paused = !paused;
+        }
+
+        function right(n) {
+            var tape = document.getElementById('tape');
+            while (tape.children.length <= pointer + n) {
+                new_cell();
+            }
+            tape.children[pointer].style = DEFAULT_STYLE;
+            pointer += n;
+            highlight_cell();
+        }
+
+        function left(n) {
+            var tape = document.getElementById('tape');
+            tape.children[pointer].style = DEFAULT_STYLE;
+            if (pointer - n <= 0) {
+                pointer = 0;
+            } else {
+                pointer -= n;
+            }
+            highlight_cell();
+        }
+
+        function plus(n) {
+            var tape = document.getElementById('tape');
+            tape.children[pointer].innerHTML = (parseInt(tape.children[pointer].innerHTML) + n) % 0x100000000;
+        }
+
+        function minus(m) {
+            var tape = document.getElementById('tape');
+            var n = parseInt(tape.children[pointer].innerHTML) - m;
+            while (n < 0) { n += 0x100000000; }
+            n %= 0x100000000;
+            tape.children[pointer].innerHTML = n;
+        }
+
+        function putchar() {
+            var output = document.getElementById('output');
+            output.innerHTML += String.fromCharCode(parseInt(tape.children[pointer].innerHTML));
+        }
+
+        function getchar() {
+            var input = document.getElementById('input');
+            if (input.value.length <= input_pointer) {
+                tape.children[pointer].innerHTML = 0;
+                return;
+            }
+            tape.children[pointer].innerHTML = input.value.charCodeAt(input_pointer++);
+        }
+
+        function isNumeric(s) {
+            return !isNaN(s - parseFloat(s));
+        }
+
+        function putnum() {
+            var output = document.getElementById('output');
+            output.innerHTML += tape.children[pointer].innerHTML;
+        }
+        function getnum() {
+            var tape = document.getElementById('tape');
+            var input = document.getElementById('input');
+            var num_string = "";
+            if (input_pointer >= input.value.length) {
+                tape.children[pointer].innerHTML = 0;
+                return;
+            }
+
+            while (input_pointer < input.value.length && input.value[input_pointer] == ' ') {
+                input_pointer++;
+            }
+
+            if (input_pointer >= input.value.length) {
+                tape.children[pointer].innerHTML = 0;
+                return;
+            }
+
+            if (!isNumeric(input.value[input_pointer])) {
+                tape.children[pointer].innerHTML = 0;
+                return;
+            }
+
+            while (input_pointer < input.value.length && isNumeric(input.value[input_pointer])) {
+                num_string += input.value[input_pointer++];
+            }
+
+            if (num_string == "") {
+                tape.children[pointer].innerHTML = 0;
+                return;
+            }
+            tape.children[pointer].innerHTML = parseInt(num_string) % 0x100000000;
+        }
+
+        function begin_loop() {
+            if (parseInt(tape.children[pointer].innerHTML) != 0) {
+                loop_stack.push(program_counter);
+            } else {
+                var matched = 1;
+                while (matched || program_counter < program.length) {
+                    program_counter++;
+                    if (instruction().ch == '[') matched++;
+                    else if (instruction().ch == ']') matched--;
+                }
+            }
+        }
+
+        function end_loop() {
+            // if (parseInt(tape.children[pointer].innerHTML) != 0) {
+            //     program_counter = loop_stack.pop()-1;
+            // }
+            program_counter = loop_stack.pop() - 1;
+        }
+
+        function deref() {
+            ref_stack.push(pointer);
+            var new_pointer = parseInt(tape.children[pointer].innerHTML);
+            tape.children[pointer].style = DEFAULT_STYLE;
+            pointer = new_pointer;
+            highlight_cell();
+        }
+
+        function refer() {
+            tape.children[pointer].style = DEFAULT_STYLE;
+            pointer = ref_stack.length == 0 ? 0 : ref_stack.pop();
+            highlight_cell();
+        }
+
+        function alloc() {
+            var tape = document.getElementById('tape');
+            var requested_mem = parseInt(tape.children[pointer].innerHTML);
+            var consecutive_zero_cells = 0;
+            for (var i = tape.children.length - 1; i > 0; i--) {
+                if (taken_cells[i] == 0) {
+                    consecutive_zero_cells++;
+                } else {
+                    consecutive_zero_cells = 0;
+                }
+
+                if (consecutive_zero_cells >= requested_mem) {
+                    var addr = i;
+                    for (var j = 0; j < requested_mem; j++) {
+                        taken_cells[addr + j] = requested_mem - j;
+                    }
+
+                    tape.children[pointer].innerHTML = addr;
+                    return;
+                }
+            }
+            tape.children[pointer].innerHTML = 0;
+        }
+
+        function free() {
+            var addr = parseInt(tape.children[pointer].innerHTML);
+            var size = taken_cells[addr];
+
+            for (var i = 0; i < size; i++) {
+                taken_cells[addr + i] = 0;
+                tape.children[addr + i].innerHTML = 0;
+            }
+        }
+
+        function reset() {
+            paused = false;
+            if (interval_id) {
+                clearInterval(interval_id);
+                interval_id = null;
+            }
+            var tape = document.getElementById('tape');
+            for (var i = 0; i < tape.children.length; i++) {
+                tape.children[i].innerHTML = 0;
+                tape.children[i].style = DEFAULT_STYLE;
+                taken_cells[i] = 0;
+            }
+
+            var output = document.getElementById('output');
+            output.innerHTML = "";
+
+            program_counter = 0;
+            pointer = 0;
+            input_pointer = 0;
+            ref_stack = [];
+            loop_stack = [];
+            highlight_cell();
+        }
+
+        function instruction() {
+            var code = editor.getValue();
+            var ch = code[program_counter];
+            var count;
+
+            for (count = 1; program_counter + count < code.length && ch == code[program_counter + count]; count++) { }
+            return { ch: ch, count: count };
+        }
+
+        function step() {
+            while (true) {
+                var i = instruction();
+                var ch = i.ch;
+                var count = i.count;
+                var skip = false;
+                if (program_counter >= editor.getValue().length) {
+                    clearInterval(interval_id);
+                    interval_id = null;
+                    return;
+                }
+                switch (ch) {
+                    case '>': right(count);
+                        program_counter += count;
+                        break;
+                    case '<': left(count);
+                        program_counter += count;
+                        break;
+                    case '+': plus(count);
+                        program_counter += count;
+                        break;
+                    case '-': minus(count);
+                        program_counter += count;
+                        break;
+
+                    default:
+                        while (count-- > 0) {
+                            switch (ch) {
+                                case '.': putchar(); break;
+                                case ',': getchar(); break;
+                                case '#': getnum(); break;
+                                case '$': putnum(); break;
+                                case '[':
+                                    var code = editor.getValue();
+                                    if (code[program_counter + 1] == '-' && code[program_counter + 2] == ']') {
+                                        tape.children[pointer].innerHTML = 0;
+                                        program_counter += 2;
+                                    } else {
+                                        begin_loop();
+                                    }
+                                    break;
+                                case ']': end_loop(); break;
+
+                                case '*': deref(); break;
+                                case '&': refer(); break;
+                                case '?': alloc(); break;
+                                case '!': free(); break;
+                                default:
+                                    skip = true;
+                                    break;
+                            }
+                            program_counter++;
+                        }
+                }
+
+                if (skip) {
+                    skip = false;
+                } else {
+                    break;
+                }
+            }
+            var pos = editor.posFromIndex(program_counter - 1);
+            editor.setSelection(pos, { line: pos.line, ch: pos.ch + 1 });
+        }
+
+        function compile_and_run(code) {
+            var result = "var ptr=0;\n\
+            var tape = Array(64);\n\
+            var ref_stack = [];\n\
+            var ref_stack_ptr = 0;\n\
+            var taken_cells = tape;\n\
+            for (var i=0; i<tape.length; i++) { tape[i] = 0; taken_cells[i] = 0; }\n\
+            function alloc() {\n\
+                var requested_mem = tape[ptr];\n\
+                var consecutive_zero_cells = 0;\n\
+                for (var i=tape.length-1; i>0; i--) {\n\
+                    if (taken_cells[i] == 0) {\n\
+                        consecutive_zero_cells++;\n\
+                    } else {\n\
+                        consecutive_zero_cells = 0;\n\
+                    }\n\
+                    if (consecutive_zero_cells >= requested_mem) {\n\
+                        var addr = i;\n\
+                        for (var j=0; j<requested_mem; j++) {\n\
+                            taken_cells[addr + j] = requested_mem - j;\n\
+                        }\n\
+                        tape[ptr] = addr;\n\
+                        return;\n\
+                    }\n\
+                }\n\
+                tape[ptr] = 0;\n\
+            }\n\
+            function free() {\n\
+                var addr = tape[ptr];\n\
+                var size = taken_cells[addr];\n\
+                for (var i=0; i<size; i++) {\n\
+                    taken_cells[addr+i] = 0;\n\
+                    tape[addr+i] = 0;\n\
+                }\n\
+            }\n\
+            function putchar() {\n\
+                var output = document.getElementById('output');\n\
+                output.innerHTML += String.fromCharCode(tape[ptr]);\n\
+            }\
+            function getchar() {\n\
+                var input = document.getElementById('input');\n\
+                if (input.value.length <= input_pointer) {\n\
+                    tape[ptr] = 0;\n\
+                    return;\n\
+                }\n\
+                tape[ptr] = input.value.charCodeAt(input_pointer++);\n\
+            }\n\
+            function putnum() {\n\
+                var output = document.getElementById('output');\n\
+                output.innerHTML += tape[ptr];\n\
+            }\n\
+            function getnum() {\n\
+                var input = document.getElementById('input');\n\
+                var num_string = '';\n\
+                if (input_pointer >= input.value.length) {\n\
+                    tape[ptr] = 0;\n\
+                    return;\n\
+                }\n\
+                while (input_pointer < input.value.length && input.value[input_pointer] == ' ') {\n\
+                    input_pointer++;\n\
+                }\n\
+                if (input_pointer >= input.value.length) {\n\
+                    tape[ptr] = 0;\n\
+                    return;\n\
+                }\n\
+                if (!isNumeric(input.value[input_pointer])) {\n\
+                    tape[ptr] = 0;\n\
+                    return;\n\
+                }\n\
+                while (input_pointer < input.value.length && isNumeric(input.value[input_pointer])) {\n\
+                    num_string += input.value[input_pointer++];\n\
+                }\n\
+                if (num_string == '') {\n\
+                    tape[ptr] = 0;\n\
+                    return;\n\
+                }\n\
+                tape[ptr] = parseInt(num_string) % 0x100000000;\n\
+            }\n";
+
+            function step(ch, count) {
+                // flush the last one
+                switch (ch) {
+                    case '[': return 'while(tape[ptr])   {\n'.repeat(count);
+                    case ']': return '}\n'.repeat(count);
+                    case '>': return 'ptr += ' + count + ';\n';
+                    case '<': return 'ptr -= ' + count + ';\n';
+                    case '+': return 'tape[ptr] += ' + count + ';\n';
+                    case '-': return 'tape[ptr] -= ' + count + ';\n';
+                    case '.': return 'putchar();\n'.repeat(count);
+                    case ',': return 'getchar();\n'.repeat(count);
+                    case '#': return 'getnum();\n'.repeat(count);
+                    case '$': return 'putnum();\n'.repeat(count);
+                    case '?': return 'alloc();\n'.repeat(count);
+                    case '!': return 'free();\n'.repeat(count);
+                    case '*': return 'ref_stack[ref_stack_ptr++] = ptr; ptr = tape[ptr];\n'.repeat(count);
+                    case '&': return 'ptr = ref_stack[--ref_stack_ptr];\n'.repeat(count);
+                    default:
+                        return '\n';
+                }
+            }
+
+            var count = 0;
+            var last = '';
+            for (var i = 0; i < code.length; i++) {
+                if (code[i] == last) {
+                    count++;
+                } else {
+                    result += step(last, count);
+                    count = 1;
+                    last = code[i];
+                }
+            }
+
+            result += step(last, count);
+            console.log(result + '\nconsole.log(tape);');
+
+            result += "\nvar real_tape = document.getElementById('tape');\n\
+            for (var i=0; i<real_tape.children.length; i++) {\n\
+                real_tape.children[i].innerHTML = tape[i];\n\
+            }\n\
+            real_tape.children[pointer].style = DEFAULT_STYLE;\n\
+            pointer = ptr;\nhighlight_cell();\nconsole.log(tape);";
+            eval(result);
+        }
+
+        async function run() {
+            reset();
+
+            var delay = parseInt(document.getElementById('delay').value);
+            if (delay == 0) {
+                var code = editor.getValue();
+                compile_and_run(code);
+            } else {
+                editor.focus();
+                interval_id = setInterval(function () {
+                    if (paused) { return; }
+                    step();
+                }, delay);
+            }
+        }
+
+        var editor = CodeMirror.fromTextArea(document.querySelector('textarea'), {
+            mode: "text/x-brainfuck",
+            flattenSpans: true,
+            lineWrapping: true,
+            lineNumbers: true,
+            matchBrackets: true,
+            indentUnit: 4,
+            theme: "base16-light",
+        });
+        editor.setSize("auto", "100%");
+
+        demo();
+    </script>
+</body>
+
+</html>
