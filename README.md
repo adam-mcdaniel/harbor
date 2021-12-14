@@ -11,22 +11,22 @@
   </p>
 
   <h3>
-    <a href="https://adam-mcdaniel.github.io/harbor">Demo</a>
+    <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">Demo</a>
     <span> | </span>
     <a href="https://crates.io/crates/harbor/">Crates</a>
     <span> | </span>
-    <a href="http://adam-mcdaniel.net">Contact Me</a>
+    <a target="_blank" href="http://adam-mcdaniel.net">Contact Me</a>
   </h3>
 
   <sub>Written in Rust🦀💖</sub>
 </div>
 
 <div align="center">
-  <a href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Chess in the web" src="./assets/fib.png" width="67%"/>
+  <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
+    <img alt="Compiled Fibonacci sequence program" src="./assets/fib.png" width="67%"/>
   </a>
-  <a href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Chess in the terminal" src="./assets/interpreter.gif" width="31.9%"/>
+  <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
+    <img alt="Dynamic Brainfuck interpreter" src="./assets/interpreter.gif" width="31.9%"/>
   </a>
 </div>
 
