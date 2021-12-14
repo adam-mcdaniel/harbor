@@ -52,8 +52,8 @@ Harbor is a high level programming language with type checking (supports unsigne
 
 
 Brainfuck programs are composed entirely of the following operators *only*:
-<img align="right" src="./assets/interpreter.gif" style="25%">
 
+<img align="right" src="./assets/interpreter.gif" style="width:25%">
 
 |Operator|Description|
 |-|-|
