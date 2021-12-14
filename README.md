@@ -52,14 +52,9 @@ Harbor is a high level programming language with type checking (supports unsigne
 
 
 Brainfuck programs are composed entirely of the following operators *only*:
-<style>
-td, th {
-   border: none!important;
-}
-</style>
 <div>
   <table cellspacing="0" cellpadding="0" style="border:none">
-      <td>
+      <td style="border: none">
         <table>
           <tr>
             <th>Operator</th>
@@ -99,7 +94,7 @@ td, th {
           </tr>
         </table>
       </td>
-      <td>
+      <td style="border: none">
         <img alt="MIR" align="right" src="./assets/interpreter.gif"/>
       </td>
   </table>
