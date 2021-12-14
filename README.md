@@ -209,11 +209,11 @@ let z = 11 in
       y = 6 in x + y * z))
 ```
 
-With this syntax, scopes are explicitly created and destructed upon individual expressions: scopes are managed by simply creating a frame for each `let` expression, and destructing it at the end of the `let` body.
+With this syntax, scopes are explicitly created and destructed upon individual expressions: they're managed by simply creating a frame for each `let` expression, and destructing it at the end of the `let` body.
 
 ![Method](./assets/method.png)
 
-Because method calls are just syntax sugar for function calls, the user needs an alternative way to pass the "self" parameter as a pointer. To do this, I increased the precedence of `&` to take place before the `.` operator. So, in the example above, the expression `&n.inc.square->putnumln` expands to `putnumln(*square(inc(&n)))`. I know this syntax looks confusing to anyone familiar with pointers, but it's impossible to misuse due to the strict typesystem.
+Because method calls are just syntax sugar for function calls, the user needs an alternative way to pass the "self" parameter as a pointer. To do this, I increased the precedence of `&` to take place before the `.` and `->` operators. So, in the example above, the expression `&n.inc.square->putnumln` expands to `putnumln(*square(inc(&n)))`. I know this syntax looks confusing to anyone familiar with pointers, but it's impossible to misuse due to the strict typesystem.
 
 ## The Recursion Problem
 
