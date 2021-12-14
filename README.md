@@ -120,7 +120,7 @@ Dynamic Brainf*** provides six additional operators: two for memory management, 
 
 Harbor source code goes through three stages before the output code: HIR, MIR, and LIR.
 
-![Flow](./assets/flow.svg)
+<img alt="Flow" align="center" src="./assets/flow.svg"/>
 
 HIR provides a typesystem and performs typechecking, MIR provides a small untyped reverse-polish-notation assembly language, and LIR is an internal representation of Dynamic Brainf\*\*\* specially structured to optimize generated code.
 
