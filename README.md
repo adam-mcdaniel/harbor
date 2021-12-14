@@ -26,6 +26,6 @@
     <img alt="Chess in the web" src="./assets/fib.png" width="67%"/>
   </a>
   <a href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Chess in the terminal" src="./assets/interpreter.gif" width="31.5%"/>
+    <img alt="Chess in the terminal" src="./assets/interpreter.gif" width="31.9%"/>
   </a>
 </div>
