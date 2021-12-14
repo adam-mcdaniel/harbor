@@ -22,11 +22,17 @@
 </div>
 
 <div align="center">
-  <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
+  <!-- <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
     <img alt="Compiled Fibonacci sequence program" src="./assets/fib.png" width="67%"/>
   </a>
   <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
     <img alt="Dynamic Brainfuck interpreter" src="./assets/interpreter.gif" width="31.6%"/>
+  </a> -->
+  <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
+    <img alt="Compiled Fibonacci sequence program" src="./assets/fib.png" width="68%"/>
+  </a>
+  <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
+    <img alt="Dynamic Brainfuck interpreter" src="./assets/machine.png" width="29%"/>
   </a>
 </div>
 
@@ -43,6 +49,8 @@ I'm a *bored* sophomore in college working on projects to fill the time. If you 
 ## What is this project?
 
 Harbor is a high level programming language with type checking (supports unsigned integers, booleans, characters, pointers, tuples) and manual memory management. What does that mean? Harbor is basically a stripped down version of C. What makes Harbor special then? It compiles to a dialect of [Brainf***](https://www.youtube.com/watch?v=hdHjjBS4cs8) called [Dynamic Brainf***](https://adam-mcdaniel.github.io/harbor).
+
+<img align="right" src="./assets/interpreter.gif" style="width: 30%">
 
 Brainfuck programs are composed entirely of the following operators *only*:
 |Operator|Description|
