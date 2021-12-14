@@ -23,7 +23,7 @@
 
 <div align="center">
   <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Compiled Fibonacci sequence program" src="./assets/fib.png" width="67%"/>
+    <img alt="Compiled Fibonacci sequence program" src="./assets/fib.png" width="66.9%"/>
   </a>
   <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
     <img alt="Dynamic Brainfuck interpreter" src="./assets/mem.gif" width="31.9%"/>
