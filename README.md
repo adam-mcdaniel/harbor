@@ -54,7 +54,7 @@ Harbor is a high level programming language with type checking (supports unsigne
 Brainfuck programs are composed entirely of the following operators *only*:
 
 <div>
-  <span style="float: right; width: 48%">
+  <span style="float: right; width: 40%">
     <img alt="MIR" align="right" src="./assets/interpreter.gif"/>
   </span>
   <span style="float: left; width: 48%">
