@@ -179,9 +179,9 @@ MIR opcodes are composed of a sort of "microcode" that's really interesting and 
 
 <div align="center">
   <img alt="Addition" src="./assets/addition.png" style="float: left; width: 40%"/>
-  <span align="center" style="width: 40%; display: inline-block">
+  <span align="center" style="width: 50%; display: inline-block">
     <img alt="Algorithm" src="./assets/add_algorithm.png" style="float: top; width: 35%"/>
-    <img alt="Memory" src="./assets/add.svg" style="float: bottom; width: 35%"/>
+    <img alt="Memory" src="./assets/add.svg" style="float: top; width: 35%"/>
   </span>
 </div>
 
