@@ -177,7 +177,12 @@ There are also 6 predefined macros for MIR. `putnum` and `putchar` both pop a ce
 
 MIR opcodes are composed of a sort of "microcode" that's really interesting and fun to write/optimize. The code generator for the addition opcode illustrates this pretty well:
 
-![Addition](./assets/addition.png)
+<div style="float:right; width:38%">
+  <img alt="Algorithm" src="./assets/add_algorithm.png">
+  <img alt="Memory" src="./assets/add.svg"/>
+</div>
+<img alt="Addition" src="./assets/addition.png" style="float: left; width: 58%"/>
+
 
 Originally, I implemented addition by popping the two values into temporary registers (`TMP1` and `TMP2`), performing the addition, and then pushing the result onto the stack. This solution is much more efficient, as everything is done in place instead of moving values around in memory!
 
