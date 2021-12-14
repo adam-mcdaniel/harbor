@@ -55,7 +55,7 @@ Brainfuck programs are composed entirely of the following operators *only*:
 
 <div>
   <span style="float:right">
-    <img alt="MIR" src="./assets/interpreter.gif" style="width: 48%"/>
+    <img alt="MIR" src="./assets/interpreter.gif" style="width: 30%"/>
   </span>
   <table style="width: 48%">
     <tr>
