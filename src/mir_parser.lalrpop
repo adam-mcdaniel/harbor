@@ -48,8 +48,7 @@ Expr: Op = {
 AtomicExpr: Op = {
     "(" <Expr+> ")" => Op::Do(<>),
 
-    "alloc" <size:Size> => Op::Do(vec![
-        Op::PushLiteral(Literal(size)),
+    "alloc" => Op::Do(vec![
         Op::Alloc,
     ]),
     "free" => Op::Free,

@@ -700,7 +700,6 @@ impl Op {
                 TMP2.zero(program);
                 TMP3.zero(program);
 
-
                 x.begin_loop(program);
                 TMP0.inc(program);
                 x.dec(program);
