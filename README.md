@@ -184,7 +184,7 @@ MIR opcodes are composed of a sort of "microcode" that's really interesting and 
   </span>
 </div>
 
-
+<br/>
 Originally, I implemented addition by popping the two values into temporary registers (`TMP1` and `TMP2`), performing the addition, and then pushing the result onto the stack. This solution is much more efficient, as everything is done in place instead of moving values around in memory!
 
 It's also extremely satisfying to see the result of the optimizations on the output code as well: because everything implemented in brainfuck seems to be on the order of O(n^2), any reduction in memory usage seems to have a dramatic effect.
