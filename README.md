@@ -26,8 +26,18 @@
     <img alt="Compiled Fibonacci sequence program" src="./assets/fib.png" width="67%"/>
   </a>
   <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Dynamic Brainfuck interpreter" src="./assets/interpreter.gif" width="31.9%"/>
+    <img alt="Dynamic Brainfuck interpreter" src="./assets/interpreter.gif" width="31.6%"/>
   </a>
 </div>
 
 ***NOTE: Click the images above for an interactive demonstration.***
+
+## About the Author
+
+I'm a *bored* sophomore in college working on projects to fill the time. If you enjoy my work, consider supporting me by buying me a coffee!
+
+<a href="https://www.buymeacoffee.com/adam.mcdaniel" target="_blank">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" height="60px" width="217px"/>
+</a>
+
+## What is this project?
