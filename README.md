@@ -51,8 +51,9 @@ I'm a *bored* sophomore in college working on projects to fill the time. If you 
 Harbor is a high level programming language with type checking (supports unsigned integers, booleans, characters, pointers, tuples) and manual memory management. What does that mean? Harbor is basically a stripped down version of C. What makes Harbor special then? It compiles to a dialect of [Brainf***](https://www.youtube.com/watch?v=hdHjjBS4cs8) called [Dynamic Brainf***](https://adam-mcdaniel.github.io/harbor).
 
 
-Brainfuck programs are composed entirely of the following operators *only*: <img align="right" src="./assets/interpreter.gif">
+Brainfuck programs are composed entirely of the following operators *only*:
 
+<img align="right" src="./assets/interpreter.gif" style="width: auto">
 
 |Operator|Description|
 |-|-|
