@@ -1,0 +1,6 @@
+do
+    while (getchar dup) do
+        putchar
+    end
+    putchar
+end

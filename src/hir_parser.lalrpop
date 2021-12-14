@@ -1,0 +1,376 @@
+use crate::hir::*;
+
+
+grammar;
+
+match {
+    "&&",
+    "||",
+    "==",
+    "!=",
+    "!",
+    "+",
+    "-",
+    "*",
+    "/",
+    "putchar",
+    "putnum",
+    "getchar",
+    "getnum",
+    "alloc",
+    "free",
+    "while",
+    "if",
+    "let",
+    "do",
+    "end",
+    "int",
+    "bool",
+    "char",
+    "void",
+    "in",
+    "fn",
+    ":",
+    "->",
+    "=",
+    "$",
+    "&",
+    "true",
+    "false",
+    "for",
+    "putcstr"
+} else {
+    r"[a-zA-Z_][a-zA-Z0-9_]*"
+} else {
+    _
+}
+
+
+
+AndOrOr: String = {
+    "&&" => <>.to_string(),
+    "||" => <>.to_string()
+}
+
+EqOrNeq: String = {
+    "==" => <>.to_string(),
+    "!=" => <>.to_string()
+}
+
+AddOrSub: String = {
+    "+" => <>.to_string(),
+    "-" => <>.to_string()
+}
+
+MulOrDiv: String = {
+    "*" => <>.to_string(),
+    "/" => <>.to_string()
+}
+
+pub HIR: Expr = Expr => <>;
+
+Block: Expr = {
+    "do" <items: (Expr ";")*> <last: (Expr ";"?)> "end" => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<Expr>>();
+        items.push(last.0);
+        Expr::Block(items)
+    }
+};
+
+Index: Expr = {
+    <mut ptr:AtomicExpr> <idxs:("[" AndOrOrExpr "]")+> => {
+        for (_, idx, _) in idxs {
+            ptr = Expr::Index(Box::new(ptr), Box::new(idx))
+        }
+        ptr
+    }
+}
+
+Dot: String = {
+    "." => <>.to_string(),
+    "->" => <>.to_string(),
+}
+
+Method: Expr = {
+    <val:SimpleExpr> <calls:(Dot Identifier ("(" List<Expr> ")")?)+> => {
+        let mut result = val;
+        for (dot, name, args) in calls {
+            if dot == "->" {
+                result = Expr::Deref(Box::new(result))
+            }
+            result = if let Some((_, args, _)) = args {
+                let mut new_args = vec![result];
+                new_args.extend(args);
+                Expr::Call(name, new_args)
+            } else {
+                Expr::Call(name, vec![result])
+            }
+        }
+        result
+    },
+    <mut tup:SimpleExpr> <idxs:(Dot Num)+> => {
+        for (dot, n) in idxs {
+            if dot == "->" {
+                tup = Expr::Deref(Box::new(tup))
+            }
+            tup = Expr::Nth(Box::new(tup), n)
+        }
+        tup
+    }
+}
+
+Let: Expr = {
+    "let" <mut defs: NonEmptyList<(Identifier (":" Type)? "=" Expr)>> "in" <body: Expr> => {
+        let mut result = body;
+        while let Some((name, t, _, expr)) = defs.pop() {
+            result = if let Some((_, t)) = t {
+                Expr::Let(name, t, Box::new(expr), Box::new(result))
+            } else {
+                Expr::LetInfer(name, Box::new(expr), Box::new(result))
+            }
+        }
+        result
+    }
+}
+
+AssignOp: String = {
+    "=" => <>.to_string(),
+    "+=" => <>.to_string(),
+    "-=" => <>.to_string(),
+    "*=" => <>.to_string(),
+    "/=" => <>.to_string(),
+}
+
+Expr: Expr = {
+    "while" <cond: AndOrOrExpr> <body: Block> => Expr::While(
+        Box::new(cond),
+        Box::new(Expr::Block(vec![
+            body,
+            Expr::None
+        ]))
+    ),
+    "for" "(" <first: Expr> ";" <cond: AndOrOrExpr> ";" <next: Expr> ")" <body: Block> => {
+        Expr::Block(vec![
+            first,
+            Expr::While(
+                Box::new(cond),
+                Box::new(Expr::Block(vec![
+                    body,
+                    next,
+                    Expr::None
+                ]))
+            )
+        ])
+    },
+    "if" <cond: AndOrOrExpr> <body: Block> => Expr::If(
+        Box::new(cond),
+        Box::new(Expr::Block(vec![
+            body,
+            Expr::None
+        ]))
+    ),
+    Let => <>,
+    "*" <addr: AtomicExpr> <op: AssignOp> <value: Expr> => assign_deref(addr, op, value),
+    <index: Index> <op: AssignOp> <value: Expr> => assign_index(index, op, value),
+    <var: Identifier> <op: AssignOp> <value: Expr> => assign_var(var, op, value),
+    "fn" <var: Identifier> "(" <args:List<(Identifier ":" AtomicType)>> ")" "->" <ret_type:Type> "=" <body:Expr> "in" <result:Expr> => {
+        let mut arg_names = vec![];
+        let mut arg_types = vec![];
+
+        for (name, _, t) in args.clone() {
+            arg_names.push(name);
+            arg_types.push(t);
+        }
+
+        Expr::Let(
+            var,
+            Type::Function(arg_types, Box::new(ret_type.clone())),
+            Box::new(Expr::Function(args.into_iter().map(|(n, _, t)| (n, t)).collect(), ret_type, Box::new(body))),
+            Box::new(result)
+        )
+    },
+    AndOrOrExpr => <>,
+}
+
+AndOrOrExpr: Expr = {
+    <mut head:EqNeqExpr> <mut tail:(AndOrOr EqNeqExpr)*> => {
+        tail.reverse();
+        while let Some((op, expr)) = tail.pop() {
+            head = if op == "&&" {
+                Expr::And(Box::new(head), Box::new(expr))
+            } else {
+                Expr::Or(Box::new(head), Box::new(expr))
+            }
+        }
+        head
+    }
+}
+
+EqNeqExpr: Expr = {
+    <mut head:NotExpr> <mut tail:(EqOrNeq NotExpr)*> => {
+        tail.reverse();
+        while let Some((op, expr)) = tail.pop() {
+            head = if op == "==" {
+                Expr::Eq(Box::new(head), Box::new(expr))
+            } else {
+                Expr::Neq(Box::new(head), Box::new(expr))
+            }
+        }
+        head
+    }
+}
+
+NotExpr: Expr = {
+    "!" <expr:NotExpr> => Expr::Not(Box::new(expr)),
+    AddSubExpr => <>,
+}
+
+
+AddSubExpr: Expr = {
+    <mut head:MulDivExpr> <mut tail:(AddOrSub MulDivExpr)*> => {
+        tail.reverse();
+        while let Some((op, expr)) = tail.pop() {
+            head = if op == "+" {
+                Expr::Add(Box::new(head), Box::new(expr))
+            } else {
+                Expr::Sub(Box::new(head), Box::new(expr))
+            }
+        }
+        head
+    }
+}
+
+MulDivExpr: Expr = {
+    <mut head:ComplexExpr> <mut tail:(MulOrDiv ComplexExpr)*> => {
+        tail.reverse();
+        while let Some((op, expr)) = tail.pop() {
+            head = if op == "*" {
+                Expr::Mul(Box::new(head), Box::new(expr))
+            } else {
+                Expr::Div(Box::new(head), Box::new(expr))
+            }
+        }
+        head
+    },
+}
+
+ComplexExpr: Expr = {
+    Method => <>,
+    "*" <ComplexExpr> => Expr::Deref(Box::new(<>)),
+    SimpleExpr => <>,
+}
+
+SimpleExpr: Expr = {
+    "putchar" "(" <Expr> ")" => Expr::Putchar(Box::new(<>)),
+    "putnum" "(" <Expr> ")" => Expr::Putnum(Box::new(<>)),
+    "putcstr" "(" <Str> ")" => {
+        Expr::Block(<>.chars().map(|ch|Expr::Putchar(Box::new(Expr::Character(ch)))).collect())
+    },
+    <s:Str> => {
+        let mut chars: Vec<Expr> = s.chars().map(Expr::Character).collect();
+        chars.push(Expr::Character('\0'));
+        Expr::Alloc(Box::new(Expr::Integer(chars.len() as u32)), Type::Character, Some(chars))
+    },
+    "alloc" "(" <n:Expr> "," <t:Type> "," "[" <default:List<Expr>> "]" ")" => Expr::Alloc(Box::new(n), t, Some(default)),
+    "alloc" "(" <n:Expr> "," <t:Type> ")" => Expr::Alloc(Box::new(n), t, None),
+    "alloc" "(" <t:Type> ")" => Expr::Alloc(Box::new(Expr::Integer(1)), t, None),
+    "free" "(" <NonEmptyList<Expr>> ")" => Expr::Block({
+        let mut result = vec![];
+        for item in <> {
+            result.push(Expr::Free(Box::new(item)));
+        }
+        result
+    }),
+    "getchar" "(" ")" => Expr::Getchar,
+    "getnum" "(" ")" => Expr::Getnum,
+    <name:Identifier> "(" <args:List<Expr>> ")" => Expr::Call(name, args),
+    "&" <idx: Index> => {
+        match idx {
+            Expr::Index(ptr, idx) => Expr::ReferIndex(ptr, idx),
+            _ => unreachable!()
+        }
+    },
+    "&" <Identifier> => Expr::Refer(<>),
+    <Identifier> "++" => Expr::Increment(<>),
+    <Identifier> "--" => Expr::Decrement(<>),
+
+    Index => <>,
+    AtomicExpr => <>,
+}
+
+AtomicExpr: Expr = {
+    <Num> => Expr::Integer(<>),
+    <Bool> => Expr::Bool(<>),
+    <Char> => Expr::Character(<>),
+    "(" ")" => Expr::None,
+    <Identifier> => Expr::Variable(<>),
+    "(" <Expr> ")" => <>,
+    Tuple => <>,
+    Block => <>,
+}
+
+Type: Type = {
+    "fn" "(" <args:List<Type>> ")" "->" <ret:AtomicType> => Type::Function(args, Box::new(ret)),
+    AtomicType => <>,
+}
+AtomicType: Type = {
+    "&" <AtomicType> => Type::Pointer(Box::new(<>)),
+    "int" => Type::Integer,
+    "bool" => Type::Bool,
+    "char" => Type::Character,
+    "void" => Type::Void,
+    "(" <items: (AtomicType ",")+> <last: AtomicType?> ")" => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
+        if let Some(last) = last {
+            items.push(last);
+        }
+        Type::Tuple(items)
+    }
+}
+
+
+List<T>: Vec<T> = {
+    <items: (T ",")*> <last: T?> => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
+        if let Some(last) = last {
+            items.push(last);
+        }
+        items
+    }
+}
+
+NonEmptyList<T>: Vec<T> = {
+    <items: (T ",")*> <last: T> => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
+        items.push(last);
+        items
+    }
+}
+
+Tuple: Expr = {
+    "(" <items: (Expr ",")+> <last: Expr?> ")" => {
+        let mut items = items.into_iter().map(|(item, _)| item).collect::<Vec<_>>();
+        if let Some(last) = last {
+            items.push(last);
+        }
+        Expr::Tuple(items)
+    }
+}
+
+
+
+
+Str: String = <s:r#""(\\.|[^"])*""#> => String::from(&s[1..s.len()-1]).replace("\\\"", "\"").replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t").replace("\\0", "\0");
+Char: char = <s:r#"'(\\.|[^'])'"#> => s.replace("\\'", "'").replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t").replace("\\0", "\0").chars().nth(1).unwrap() as char;
+Bool: bool = {
+    "true" => true,
+    "false" => false,
+}
+
+Num: u32 = {
+    r"[1-9][0-9]*|[0]" => {
+        <>.parse::<u32>().unwrap()
+    },
+}
+
+Identifier: String = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_string();

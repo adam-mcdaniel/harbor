@@ -1,29 +1,29 @@
-use tf::{what, why, how};
+use harbor::{hir, mir, lir};
 use std::collections::BTreeMap;
 use clap::{clap_app, crate_authors, crate_version, crate_description, AppSettings::ArgRequiredElseHelp};
 
-fn compile_what(code: impl ToString) -> Result<String, what::Error>{
-    let mut program = how::Program::default();
-    use why::*;
-    SP.set(why::TOTAL_REGISTERS, &mut program);
+fn compile_hir(code: impl ToString) -> Result<lir::Program, hir::Error>{
+    let mut program = lir::Program::default();
+    use mir::*;
+    SP.set(mir::TOTAL_REGISTERS, &mut program);
     FP.set(TOTAL_REGISTERS, &mut program);
 
-    let w = what::parse(code.to_string())?;
+    let w = hir::parse(code.to_string())?;
     let w = w.compile(&BTreeMap::new(), &mut 0)?;
     match w.assemble(&mut program) {
         Ok(()) => {
-            Ok(program.to_string())
+            Ok(program.optimize())
         }
         Err(e) => {
-            Err(what::Error::WhyError(e))
+            Err(hir::Error::MIRError(e))
         }
     }
 }
 
-fn assemble_why(code: impl ToString) -> Result<String, why::Error>{
-    let mut program = how::Program::default();
-    use why::*;
-    SP.set(why::TOTAL_REGISTERS, &mut program);
+fn assemble_mir(code: impl ToString) -> Result<String, mir::Error>{
+    let mut program = lir::Program::default();
+    use mir::*;
+    SP.set(mir::TOTAL_REGISTERS, &mut program);
     FP.set(TOTAL_REGISTERS, &mut program);
 
     let mut scope = BTreeMap::new();
@@ -48,30 +48,31 @@ fn assemble_why(code: impl ToString) -> Result<String, why::Error>{
         Op::Pop(TMP2)
     ]);
 
-    let w = why::parse(code)?;
+    let w = mir::parse(code)?;
     w.assemble_with_scope(&scope, &mut program)?;
-    Ok(program.to_string())
+    Ok(program.optimize().to_string())
 }
 
-fn assemble_how(code: impl ToString) -> String {
-    let code = code.to_string();
+fn assemble_lir(code: lir::Program) -> String {
     let mut result = String::from("#include <stdio.h>\n#include <stdlib.h>\n\n#define TAPE_SIZE 30000\nvoid panic(char *msg) {\n    fprintf(stderr, \"panic: %s\\n\", msg);\n    exit(-1);\n}\nvoid print_tape(unsigned int *tape, unsigned int *taken_cells, unsigned int size) { for (unsigned int i = 0; i < size; i++) { printf(\"%u \", tape[i]); } printf(\"\\n\"); int unfreed = 0; for (unsigned int i=0; i < TAPE_SIZE; i++) {unfreed += taken_cells[i]; i += taken_cells[i];} printf(\"%d unfreed\\n\", unfreed); }\nunsigned int allocate(unsigned int *tape, unsigned int ptr, unsigned int *taken_cells) {\n    unsigned int requested_mem = tape[ptr];\n    unsigned int consecutive_zero_cells = 0;\n    for (int i=TAPE_SIZE-1; i>0; i--) {\n        if (taken_cells[i] == 0) {\n            consecutive_zero_cells++;\n        } else {\n            consecutive_zero_cells = 0;\n        }\n        if (consecutive_zero_cells >= requested_mem) {\n            unsigned int addr = i;\n            for (int j=0; j<requested_mem; j++) {\n                taken_cells[addr + j] = requested_mem - j;\n            }\n            return addr;\n        }\n    }\n    panic(\"no free memory\");\n}\nvoid free_mem(unsigned int *tape, unsigned int ptr, unsigned int *taken_cells) {\n    unsigned int address = tape[ptr];\n    unsigned int size = taken_cells[address];\n\n    for (int i=0; i<size; i++) {\n        taken_cells[address+i] = 0;\n        tape[address+i] = 0;\n    }\n}\nvoid zero(unsigned int *tape) {\n    for (int i = 0; i < TAPE_SIZE; i++) tape[i] = 0;\n}\nint main() {\n    unsigned int tape[TAPE_SIZE], taken_cells[TAPE_SIZE], ref_tape[256]; \n    unsigned int ptr = 0, ref_ptr = 0;\n    zero(tape);\n    zero(taken_cells);\n");
-    for op in code.to_string().chars() {
+    use lir::Op;
+    for op in code.optimize() {
         match op {
-            '+' => result.push_str("tape[ptr]++;"),
-            '-' => result.push_str("tape[ptr]--;"),
-            '>' => result.push_str("ptr++;"),
-            '<' => result.push_str("ptr--;"),
-            '[' => result.push_str("while (tape[ptr]) {"),
-            ']' => result.push_str("}"),
-            ',' => result.push_str("tape[ptr] = getchar();"),
-            '.' => result.push_str("putchar(tape[ptr]);"),
-            '#' => result.push_str("scanf(\"%d\", &tape[ptr]);"),
-            '$' => result.push_str("printf(\"%d\", tape[ptr]);"),
-            '*' => result.push_str("ref_tape[ref_ptr++] = ptr; ptr = tape[ptr];"),
-            '&' => result.push_str("ptr = ref_tape[--ref_ptr];"),
-            '?' => result.push_str("tape[ptr] = allocate(tape, ptr, taken_cells);"),
-            '!' => result.push_str("free_mem(tape, ptr, taken_cells);"),
+            Op::Plus(n) if n > 0 => result += &format!("tape[ptr]+={};", n),
+            Op::Minus(n) if n > 0 => result += &format!("tape[ptr]-={};", n),
+            Op::Right(n) if n > 0 => result += &format!("ptr+={};", n),
+            Op::Left(n) if n > 0 => result += &format!("ptr-={};", n),
+            Op::Loop => result.push_str("while (tape[ptr]) {"),
+            Op::End => result.push_str("}"),
+            Op::Get => result.push_str("tape[ptr] = getchar();"),
+            Op::Put => result.push_str("putchar(tape[ptr]);"),
+            Op::Getnum => result.push_str("scanf(\"%d\", &tape[ptr]);"),
+            Op::Putnum => result.push_str("printf(\"%d\", tape[ptr]);"),
+            Op::Deref => result.push_str("ref_tape[ref_ptr++] = ptr; ptr = tape[ptr];"),
+            Op::Refer => result.push_str("ptr = ref_tape[--ref_ptr];"),
+            Op::Alloc => result.push_str("tape[ptr] = allocate(tape, ptr, taken_cells);"),
+            Op::Free => result.push_str("free_mem(tape, ptr, taken_cells);"),
+            Op::Comment(comment) => result += &format!("\n// {}\n", comment),
             _ => {}
         }
     }
@@ -80,16 +81,15 @@ fn assemble_how(code: impl ToString) -> String {
 
 
 fn main() {
-    let matches = clap_app!(tf =>
+    let matches = clap_app!(harbor =>
         (version: crate_version!())
         (author: crate_authors!())
         (about: crate_description!())
-
         (@group input =>
-            (@arg c: -c "Compile What source to C")
-            (@arg what: -w --what "Compile What source")
-            (@arg why:  -y --why  "Assemble Why assembler")
-            (@arg how:  -h --how  "Assemble How brainfuck dialect\n(a 32-bit superset of brainfuck)")
+            (@arg c: -c "Compile source to C")
+            (@arg hir: -h --hir "Compile source to MIR")
+            (@arg mir: -m --mir "Compile MIR to Dynamic Brainfuck")
+            (@arg bf: -b --bf "Assemble Dynamic Brainfuck \n(a 32-bit dialect of brainfuck)")
         )
         (@arg FILE: +required "Input file")
         (@arg OUTPUT: -o +takes_value "Optionally specify output file")
@@ -101,27 +101,27 @@ fn main() {
     if let Some(input_file) = matches.value_of("FILE") {
         // Get the contents of the input file
         if let Ok(contents) = std::fs::read_to_string(input_file) {
-            let compile_result = if matches.is_present("why") {
-                match assemble_why(contents) {
+            let compile_result = if matches.is_present("mir") {
+                match assemble_mir(contents) {
                     Ok(s) => s,
                     Err(e) => {
                         eprintln!("{}", e);
                         return;
                     }
                 }
-            } else if matches.is_present("how") {
-                assemble_how(contents)
-            } else if matches.is_present("what") {
-                match compile_what(contents) {
-                    Ok(s) => s,
+            } else if matches.is_present("bf") {
+                assemble_lir(lir::Program::from(contents.as_str()))
+            } else if matches.is_present("hir") {
+                match compile_hir(contents) {
+                    Ok(s) => s.to_string(),
                     Err(e) => {
                         eprintln!("{}", e);
                         return;
                     }
                 }
             } else {
-                match compile_what(contents) {
-                    Ok(s) => assemble_how(s),
+                match compile_hir(contents) {
+                    Ok(s) => assemble_lir(s),
                     Err(e) => {
                         eprintln!("{}", e);
                         return;
@@ -144,7 +144,7 @@ fn main() {
     
 
 
-    // } else if matches.is_present("how") {
+    // } else if matches.is_present("lir") {
         // compile(&cwd, &input_file, contents, TS)
 
     // Same as previous examples...
@@ -229,7 +229,7 @@ fn main() {
     //     ]))
     // )
 
-    // println!("{}", compile_what(r#"
+    // println!("{}", compile_hir(r#"
     // "#).unwrap());
 
 

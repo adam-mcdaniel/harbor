@@ -1,4 +1,0 @@
-do
-    10 0@=
-    putnum
-end

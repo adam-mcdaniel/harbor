@@ -1,14 +1,9 @@
 [package]
-name = "tf"
+name = "harbor"
 version = "0.1.0"
 edition = "2021"
-authors = [
-    "Adam McDaniel",
-    "Vicky Chakpuang",
-    "Logan Wrinkle",
-    "Cade Walker"
-]
-description = "A collection of the The Fuck? compiler tools to compile What? and assemble Why? and How?"
+authors = ["Adam McDaniel"]
+description = "A language that ports: targeting your thermostat, UFO, and kitchen sink."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

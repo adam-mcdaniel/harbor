@@ -1,0 +1,1 @@
+let n = getnum() in putnum(n * n)

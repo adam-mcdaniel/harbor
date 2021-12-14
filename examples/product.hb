@@ -1,0 +1,1 @@
+putnum(getnum() * getnum())
