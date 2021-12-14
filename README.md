@@ -217,7 +217,7 @@ Because method calls are just syntax sugar for function calls, the user needs an
 
 ## The Recursion Problem
 
-<img alt="Basic Blocks" src="./assets/basicblock.png" style="float: right"/>
+<img alt="Basic Blocks" src="./assets/basicblock.png" style="display: inline-block; float: right"/>
 
 This seems to be the only area where Harbor really lacks in its domain. The way the compiler is constructed, it is basically impossible to implement recursion in a sane way.
 
