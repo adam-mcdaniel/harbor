@@ -180,7 +180,7 @@ MIR opcodes are composed of a sort of "microcode" that's really interesting and 
 <div>
   <img alt="Addition" align="left" src="./assets/addition.png" style="float: left; width: 40%; height: 100%; display: inline-block"/>
   <span align="top" style="float: right; width: 50%; height: 100%; display: inline-block">
-    <img alt="Memory" align="top" src="./assets/add.svg"/><img alt="Algorithm" align="top" src="./assets/add_algorithm.png"/>
+    <img alt="Memory" align="top" src="./assets/add2.svg"/><img alt="Algorithm" align="top" src="./assets/add_algorithm.png"/>
   </span>
 </div>
 
