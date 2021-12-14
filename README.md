@@ -138,11 +138,11 @@ MIR provides 14 registers:
 
 The registers are statically allocated by the compiler at the first 14 cells, with the stack beginning immediately after.
 
-![Registers](./assets/registers.svg)
+<img alt="Registers" align="center" src="./assets/registers.svg"/>
 
 You might notice that `FP` strangely comes after `TMP0` and `TMP1`, but before `TMP2`. There's a good reason for this: copying memory cells in Brainf*** dialects is a *very expensive* (and very frequent) operation. When memory is copied, it uses `TMP0` as a buffer for the assignment code:
 
-![Copy Cell](./assets/copy_cell.png)
+<img alt="Copy Cell" align="center" src="./assets/copy_cell.png"/>
 
 So, `TMP0` is placed before `FP` to increase locality, but I'm sure the effect is negligible. `TMP1` is also placed before `FP` for similar reasons: it's used frequently in almost all alrithmetic operations. `TMP2` through `TMP5` are more specialized registers, mainly used for integer division, multiplication, and setting up stack frames and activation records for functions.
 
