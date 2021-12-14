@@ -60,6 +60,8 @@ pub enum Error {
     SizeOfFunction(Type),
     DerefNonPointer(Expr, Type),
     NthOfNonTuple(Expr, Type),
+    AllocVoid(Expr),
+    CmpOfTuple(Expr, Type),
 
     ParseError(String),
     MIRError(mir::Error)
@@ -74,6 +76,8 @@ impl fmt::Display for Error {
             Self::SizeOfFunction(t) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mattempted to get the size of a function with signature `{}`: are you trying to assign functions to a value?", t),
             Self::DerefNonPointer(expr, t) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mdereferenced non-pointer type `{}` in expression `{}`", t, expr),
             Self::NthOfNonTuple(expr, t) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mmember of non-tuple type `{}` in expression `{}`", t, expr),
+            Self::AllocVoid(expr) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mattempted to allocate an array of elements with type `void` in expression `{}`", expr),
+            Self::CmpOfTuple(expr, t) => write!(f, "\x1b[91merror: \x1b[m\x1b[0mattempted to compare tuple of type `{}` in expression `{}`", t, expr),
 
             Self::ParseError(e) => write!(f, "\x1b[91merror: \x1b[m\x1b[0m\n{}", e),
             Self::MIRError(e) => write!(f, "{}", e)
@@ -737,6 +741,9 @@ impl Expr {
                 if count_type != Type::Integer {
                     return Err(Error::MismatchedTypes(self.clone(), Type::Integer, count_type));
                 }
+                if t == &Type::Void {
+                    return Err(Error::AllocVoid(self.clone()));
+                }
                 if let Some(vals) = vals {
                     for val in vals {
                         let val_type = val.get_type(scope)?;
@@ -1041,6 +1048,11 @@ impl Expr {
                 if a_type != b_type {
                     return Err(Error::MismatchedTypes(self.clone(), a_type, b_type));
                 }
+
+                if matches!(a_type, Type::Tuple(_)) {
+                    return Err(Error::CmpOfTuple(self.clone(), a_type));
+                }
+
                 Type::Bool
             }
         })

@@ -1,4 +1,4 @@
-use harbor::{hir, mir, lir};
+use harborc::{hir, mir, lir};
 use std::collections::BTreeMap;
 use clap::{clap_app, crate_authors, crate_version, crate_description, AppSettings::ArgRequiredElseHelp};
 

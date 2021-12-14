@@ -51,7 +51,7 @@ I'm a *bored* sophomore in college working on projects to fill the time. If you 
 Harbor is a high level programming language with type checking (supports unsigned integers, booleans, characters, pointers, tuples) and manual memory management. What does that mean? Harbor is basically a stripped down version of C. What makes Harbor special then? It compiles to a dialect of [Brainf***](https://www.youtube.com/watch?v=hdHjjBS4cs8) called [Dynamic Brainf***](https://adam-mcdaniel.github.io/harbor).
 
 
-Brainfuck programs are composed entirely of the following operators *only*:
+Brainf*** programs are composed entirely of the following operators *only*:
 <div>
   <a href="https://adam-mcdaniel.github.io/harbor" target="_blank"><img alt="MIR" align="right" width="300" src="./assets/interpreter.gif"/></a>
   <table>
@@ -116,6 +116,8 @@ Dynamic Brainf*** provides six additional operators: two for memory management, 
 |#|Make the current cell equal to the next integer in the input buffer (like `scanf("%d", &tape[pointer])`).|
 |$|Output the current cell as an integer (like `printf("%d", tape[pointer])`).|
 
+To give you some perspective on just how little Dynamic Brainf\*\*\* adds, ***the code responsible for assembling Dynamic Brainf\*\*\* in this compiler is just 24 lines long!*** 
+
 ## How does it work?
 
 Harbor source code goes through three stages before the output code: HIR, MIR, and LIR.
@@ -124,7 +126,7 @@ Harbor source code goes through three stages before the output code: HIR, MIR, a
 
 HIR provides a typesystem and performs typechecking, MIR provides a small untyped reverse-polish-notation assembly language, and LIR is an internal representation of Dynamic Brainf\*\*\* specially structured to optimize generated code.
 
-The most interesting part of the compilation process is the transition from Harbor MIR to Dynamic Brainfuck. Harbor MIR looks like this:
+The most interesting part of the compilation process is the transition from Harbor MIR to Dynamic Brainf***. Harbor MIR looks like this:
 
 <img alt="MIR" src="./assets/fib_mir.png" style="float: left; width: 48%"/><img alt="Fib DBF" src="./assets/fib_dbf.png" style="float: right; width: 48%"/>
 
@@ -151,12 +153,12 @@ So, `TMP0` is placed before `FP` to increase locality, but I'm sure the effect i
 |Opcode|Description|
 |-|-|
 |`set 123`|Pops an address and stores a value at that address|
-|`=`|Pops an address and pops a value into that address. Also takes an optional size parameter for the number of cells store at the address like: `%int`, `%(%int, %bool)`, or `%char`.|
-|`@`|Pops an address and loads a value from that address. Also takes an optional size parameter to load from the address like: `%int`, `%(%int, %int)`, or `%char`.|
-|`get %int`|Pushes a block of memory on the stack with the given size. `%int` allocates one cell, `%(%int, %int)` allocates 2, etc.|
-|`dump %int`|Deallocates a block of memory on the stack with the given size.|
+|`=` (called `Store` internally)|Pops an address and pops a value into that address. Also takes an optional size parameter for the number of cells store at the address like: `%int`, `%(%int, %bool)`, or `%char`.|
+|`@` (called `Load` internally)|Pops an address and loads a value from that address. Also takes an optional size parameter to load from the address like: `%int`, `%(%int, %int)`, or `%char`.|
+|`get %int` (called `Stalloc` internally)|Pushes a block of memory on the stack with the given size. `%int` allocates one cell, `%(%int, %int)` allocates 2, etc.|
+|`dump %int` (called `Stfree` internally)|Deallocates a block of memory on the stack with the given size (`%int` is one cell).|
 |`123`|Integer literals are pushed to the stack.|
-|`+`|Pop two numbers off the stack and push their result.|
+|`+`|Pop two numbers off the stack and push their sum.|
 |`-`|Pop two numbers off the stack and push their difference.|
 |`*`|Pop two numbers off the stack and push their product.|
 |`/`|Pop two numbers off the stack and push their quotient.|
@@ -169,7 +171,7 @@ So, `TMP0` is placed before `FP` to increase locality, but I'm sure the effect i
 |`free`|Pop an address off the stack and free the cells at that block.|
 |`dup`|Duplicate the top cell on the stack.|
 |`frame %int -> %(%int, %int) do ... end`|Create a stack frame for a code block that takes an argument and returns a value. The FP points at the first argument, and the return value is left on the stack when the code block ends after the frame is destructed.|
-|`if (2 4 *) do ... end`|Perform an if statement. Else clauses are not supported.|
+|`if (2 4 *) do ... end`|Perform an if statement. Else clauses are not supported: it's complicated, but essentially nested if-else statements would walk over each other's saved conditions in the stack.|
 |`$R0`, `$R1`, ..., `$R5`|Push a register's value onto the stack.|
 |`&R0`, `&R1`, ..., `&R5`|Push a register's address onto the stack.|
 
@@ -187,4 +189,66 @@ MIR opcodes are composed of a sort of "microcode" that's really interesting and 
 
 Originally, I implemented addition by popping the two values into temporary registers (`TMP1` and `TMP2`), performing the addition, and then pushing the result onto the stack. This solution is much more efficient, as everything is done in place instead of moving values around in memory!
 
-It's also extremely satisfying to see the result of the optimizations on the output code as well: because everything implemented in brainfuck seems to be on the order of O(n^2), any reduction in memory usage seems to have a dramatic effect.
+It's also extremely satisfying to see the result of the optimizations on the output code as well: because ***everything*** implemented in Brainf*** seems to be on the order of O(n^2), any reduction in memory usage seems to have a dramatic effect.
+
+These microcode blocks can also get **extremely** long: *division is upwards of 60 instructions!*
+
+### Harbor Frontend
+
+Harbor's frontend is *significantly* more cozy than its MIR; looking at it you wouldn't know it's a terrible, horrible language!
+
+![Frontend](./assets/frontend.png)
+
+Harbor supports method like syntax for function calls, `let` type inference, pointers with indexing `[]` and dereference `*` operators, tuples, heap allocated string literals, and a strict type system.
+
+Its syntax is Rust inspired, but with several slight quirks. Because of the way MIR internally represents scopes and frames, it was much simpler to implement expressions in an explicitly chained manner:
+
+```rs
+let z = 11 in
+  putnum((let x = 5,
+      y = 6 in x + y * z))
+```
+
+With this syntax, scopes are explicitly created and destructed upon individual expressions: scopes are managed by simply creating a frame for each `let` expression, and destructing it at the end of the `let` body.
+
+![Method](./assets/method.png)
+
+Because method calls are just syntax sugar for function calls, the user needs an alternative way to pass the "self" parameter as a pointer. To do this, I increased the precedence of `&` to take place before the `.` operator. So, in the example above, the expression `&n.inc.square->putnumln` expands to `putnumln(*square(inc(&n)))`. I know this syntax looks confusing to anyone familiar with pointers, but it's impossible to misuse due to the strict typesystem.
+
+## Exercises for the reader
+
+- ***LLVM or x86 Dynamic Brainf\*\*\* Compiler***: Harbor compiles its output Dynamic Brainf\*\*\* to C, but other compilers targeting **LLVM** or **x86** would be a significant improvement.
+- ***Reverse-Engineering-Optimizing Dynamic Brainf\*\*\* Compiler***: because of the way Harbor compiles code, optimizations can easily be applied by *reverse engineering* the output code. For example: each MIR arithmetic stack operation *always* compiles to the same result. To optimize the compiled Dynamic Brainf*** code, simply compile the code responsible for an opcode *as the actual opcode operation* instead of performing **hundreds** of small Brainf*** operations to achieve the same thing! With such a compiler, Harbor could be as efficient as unoptimized C (This sentence brings me great shame)!
+- [Hardware Implementation](https://www.youtube.com/watch?v=-l9ookS6pHw): imagine running this terrible language *natively!* All of the fun debugging with a shell, but *with an oscilloscope instead!*
+- [Minecraft Brainf*** Implementation](https://www.youtube.com/watch?v=fZzcYkgkQ-I): it would be entirely possible (*and exceeding difficult*) to implement a 5 or 6 bit implementation (the minimum possible address size is 5 bit, as 4 bit only leaves 2 cells for the stack) of a Dynamic Brainf*** machine, possibly with simplified IO, that could run this compiler's output code natively!
+
+## Usage
+
+To install and use, you must download [the Rust programming language](https://rust-lang.org).
+
+#### Development Build
+
+```bash
+# Install directly from git with cargo
+cargo install --git https://github.com/adam-mcdaniel/harbor
+
+# Or, alternatively, the repo and install from source
+git clone https://github.com/adam-mcdaniel/harbor
+cd harbor
+cargo install -f --path .
+```
+
+#### Releases
+To get the current release build, install from [crates.io](https://crates.io/crates/harborc).
+
+```bash
+# Also works for updating harbor
+cargo install -f harborc
+```
+
+#### After Install
+
+```bash
+# Just run the harbor executable!
+harbor
+```
