@@ -53,47 +53,45 @@ Harbor is a high level programming language with type checking (supports unsigne
 
 Brainfuck programs are composed entirely of the following operators *only*:
 
-<div>
-  <img align="right" src="./assets/interpreter.gif">
-  <table align="left">
-    <tr>
-      <th>Operator</th>
-      <th>Description</th>
-    </tr>
-    <tr>
-      <td>&lt;</td>
-      <td>Move the pointer one cell to the left.</td>
-    </tr>
-    <tr>
-      <td>&gt;</td>
-      <td>Move the pointer one cell to the right.</td>
-    </tr>
-    <tr>
-      <td>+</td>
-      <td>Increment the current cell by 1.</td>
-    </tr>
-    <tr>
-      <td>-</td>
-      <td>Decrement the current cell by 1.</td>
-    </tr>
-    <tr>
-      <td>[</td>
-      <td>Begin a loop while the cell at the pointer is not zero.</td>
-    </tr>
-    <tr>
-      <td>]</td>
-      <td>Mark the ending of a loop body.</td>
-    </tr>
-    <tr>
-      <td>,</td>
-      <td>Make the current cell equal to the next byte of input.</td>
-    </tr>
-    <tr>
-      <td>.</td>
-      <td>Output the current cell as a byte.</td>
-    </tr>
-  </table>
-</div>
+<img align="right" src="./assets/interpreter.gif">
+<table align="left">
+  <tr>
+    <th>Operator</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>&lt;</td>
+    <td>Move the pointer one cell to the left.</td>
+  </tr>
+  <tr>
+    <td>&gt;</td>
+    <td>Move the pointer one cell to the right.</td>
+  </tr>
+  <tr>
+    <td>+</td>
+    <td>Increment the current cell by 1.</td>
+  </tr>
+  <tr>
+    <td>-</td>
+    <td>Decrement the current cell by 1.</td>
+  </tr>
+  <tr>
+    <td>[</td>
+    <td>Begin a loop while the cell at the pointer is not zero.</td>
+  </tr>
+  <tr>
+    <td>]</td>
+    <td>Mark the ending of a loop body.</td>
+  </tr>
+  <tr>
+    <td>,</td>
+    <td>Make the current cell equal to the next byte of input.</td>
+  </tr>
+  <tr>
+    <td>.</td>
+    <td>Output the current cell as a byte.</td>
+  </tr>
+</table>
 
 Dynamic Brainf*** provides six additional operators: two for memory management, two for pointer manipulation, and two for better IO. With these new operators, it's significantly simpler to compile common abstractions like pointers, stack operations, and compound datatypes.
 
