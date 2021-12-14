@@ -1043,7 +1043,6 @@ impl Expr {
                 }
                 Type::Bool
             }
-
         })
     }
 }

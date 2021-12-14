@@ -1,0 +1,33 @@
+
+let
+    var = do
+            $FP +
+    end,
+
+    putendl = 
+        (10 putchar),
+
+    protofib =
+        fn(a: %int, b: %int) -> %(%int, %int) do
+            b@ putnum putendl
+            b@ a@ b@ +
+        end,
+
+    fib = fn(n: %int) -> %void do
+        get %(%int, %int)
+        let a = (1 var),
+            b = (2 var)
+        in
+            0 a=
+            1 b=
+            while (n@) do
+                a@ b@ protofib b= a=
+                n dec
+            end
+        end
+        dump %(%int, %int)
+    end
+in
+    20 fib putendl
+end
+
