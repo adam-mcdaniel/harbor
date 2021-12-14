@@ -54,47 +54,49 @@ Harbor is a high level programming language with type checking (supports unsigne
 Brainfuck programs are composed entirely of the following operators *only*:
 
 <div>
+  <span style="float: left; width: 48%">
+    <table>
+      <tr>
+        <th>Operator</th>
+        <th>Description</th>
+      </tr>
+      <tr>
+        <td>&lt;</td>
+        <td>Move the pointer one cell to the left.</td>
+      </tr>
+      <tr>
+        <td>&gt;</td>
+        <td>Move the pointer one cell to the right.</td>
+      </tr>
+      <tr>
+        <td>+</td>
+        <td>Increment the current cell by 1.</td>
+      </tr>
+      <tr>
+        <td>-</td>
+        <td>Decrement the current cell by 1.</td>
+      </tr>
+      <tr>
+        <td>[</td>
+        <td>Begin a loop while the cell at the pointer is not zero.</td>
+      </tr>
+      <tr>
+        <td>]</td>
+        <td>Mark the ending of a loop body.</td>
+      </tr>
+      <tr>
+        <td>,</td>
+        <td>Make the current cell equal to the next byte of input.</td>
+      </tr>
+      <tr>
+        <td>.</td>
+        <td>Output the current cell as a byte.</td>
+      </tr>
+    </table>
+  </span>
   <span style="float: right; width: 48%">
     <img alt="MIR" src="./assets/interpreter.gif"/>
   </span>
-  <table style="float: left; width: 48%">
-    <tr>
-      <th>Operator</th>
-      <th>Description</th>
-    </tr>
-    <tr>
-      <td>&lt;</td>
-      <td>Move the pointer one cell to the left.</td>
-    </tr>
-    <tr>
-      <td>&gt;</td>
-      <td>Move the pointer one cell to the right.</td>
-    </tr>
-    <tr>
-      <td>+</td>
-      <td>Increment the current cell by 1.</td>
-    </tr>
-    <tr>
-      <td>-</td>
-      <td>Decrement the current cell by 1.</td>
-    </tr>
-    <tr>
-      <td>[</td>
-      <td>Begin a loop while the cell at the pointer is not zero.</td>
-    </tr>
-    <tr>
-      <td>]</td>
-      <td>Mark the ending of a loop body.</td>
-    </tr>
-    <tr>
-      <td>,</td>
-      <td>Make the current cell equal to the next byte of input.</td>
-    </tr>
-    <tr>
-      <td>.</td>
-      <td>Output the current cell as a byte.</td>
-    </tr>
-  </table>
 </div>
 <!-- 
 |Operator|Description|
