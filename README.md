@@ -22,17 +22,17 @@
 </div>
 
 <div align="center">
-  <!-- <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
+  <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
     <img alt="Compiled Fibonacci sequence program" src="./assets/fib.png" width="67%"/>
   </a>
   <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Dynamic Brainfuck interpreter" src="./assets/interpreter.gif" width="31.6%"/>
-  </a> -->
-  <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
+    <img alt="Dynamic Brainfuck interpreter" src="./assets/mem.gif" width="31.9%"/>
+  </a>
+  <!-- <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
     <img alt="Compiled Fibonacci sequence program" src="./assets/fib.png" width="68%"/>
   </a>
   <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">
-    <img alt="Dynamic Brainfuck interpreter" src="./assets/machine.png" width="29%"/>
+    <img alt="Dynamic Brainfuck interpreter" src="./assets/mem.gif" width="29%"/> -->
   </a>
 </div>
 
