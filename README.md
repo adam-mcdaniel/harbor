@@ -13,7 +13,7 @@
   <h3>
     <a target="_blank" href="https://adam-mcdaniel.github.io/harbor">Demo</a>
     <span> | </span>
-    <a href="https://crates.io/crates/harbor/">Crates</a>
+    <a href="https://crates.io/crates/harborc/">Crates</a>
     <span> | </span>
     <a target="_blank" href="http://adam-mcdaniel.net">Contact Me</a>
   </h3>
