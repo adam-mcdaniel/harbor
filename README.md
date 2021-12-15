@@ -189,13 +189,13 @@ MIR opcodes are composed of a sort of "microcode" that's really interesting and 
 
 Originally, I implemented addition by popping the two values into temporary registers (`TMP1` and `TMP2`), performing the addition, and then pushing the result onto the stack. This solution is much more efficient, as everything is done in place instead of moving values around in memory!
 
-It's also extremely satisfying to see the result of the optimizations on the output code as well: because ***everything*** implemented in Brainf*** seems to be on the order of O(n^2), any reduction in memory usage seems to have a dramatic effect.
+It's also very satisfying to see the result of the optimizations on the output code as well: because ***everything*** implemented in Brainf*** seems to be on the order of O(n^2), any reduction in memory usage seems to have a dramatic effect.
 
-These microcode blocks can also get **extremely** long: *division is upwards of 60 instructions!*
+These microcode blocks can also get absurdly long: *division is upwards of 60 instructions!*
 
 ### Harbor Frontend
 
-Harbor's frontend is *significantly* more cozy than its MIR; looking at it you wouldn't know it's a terrible, horrible language!
+Harbor's frontend is significantly more cozy than its MIR; looking at it you wouldn't know it's a terrible, horrible language!
 
 ![Frontend](./assets/frontend.png)
 
