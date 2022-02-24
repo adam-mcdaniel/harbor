@@ -56,6 +56,7 @@ Brainf*** programs are composed entirely of the following operators *only*:
   <a href="https://adam-mcdaniel.github.io/harbor" target="_blank"><img alt="MIR" align="center" width="50%" src="./assets/interpreter.gif"/></a>
 </div>
 
+
 |Operator|Description|C Equivalent|
 |:-:|-|-|
 |<|Move the pointer one cell to the left.|`ptr--;`|
