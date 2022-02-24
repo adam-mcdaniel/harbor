@@ -52,7 +52,7 @@ Harbor is a high level programming language with type checking (supports unsigne
 
 
 Brainf*** programs are composed entirely of the following operators *only*:
-<div>
+<div align="center">
   <a href="https://adam-mcdaniel.github.io/harbor" target="_blank"><img alt="MIR" align="center" width="60%" src="./assets/interpreter.gif"/></a>
   
 |Operator|Description|C Equivalent|
