@@ -59,13 +59,13 @@ Brainf*** programs are composed entirely of the following operators *only*:
 
 |Operator|Description|C Equivalent|
 |:-:|-|-|
-|<|Move the pointer one cell to the left.|`ptr--;`|
-|>|Move the pointer one cell to the right.|`ptr++;`|
-|+|Increment the current cell by 1.|`tape[ptr]++;`|
-|-|Decrement the current cell by 1.|`tape[ptr]--;`|
+|<|Move the tape pointer one cell to the left.|`ptr--;`|
+|>|Move the tape pointer one cell to the right.|`ptr++;`|
+|+|Increment the current cell at the pointer in the tape by 1.|`tape[ptr]++;`|
+|-|Decrement the current cell at the pointer in the tape by 1.|`tape[ptr]--;`|
 |,|Make the current cell equal to the next byte of input.|`tape[ptr] = getchar();`|
 |.|Output the current cell as a byte.|`putchar(tape[ptr]);`|
-|[|Begin a loop while the cell at the pointer is not zero.|`while (tape[ptr]) {`|
+|[|Begin a loop while the cell at the pointer is not zero. If the cell is zero, then jump to the matching `]`.|`while (tape[ptr]) {`|
 |]|Mark the ending of a loop body.|`}`|
 <!-- 
 |Operator|Description|
