@@ -54,45 +54,17 @@ Harbor is a high level programming language with type checking (supports unsigne
 Brainf*** programs are composed entirely of the following operators *only*:
 <div>
   <a href="https://adam-mcdaniel.github.io/harbor" target="_blank"><img alt="MIR" align="right" width="300" src="./assets/interpreter.gif"/></a>
-  <table>
-    <tr>
-      <th>Operator</th>
-      <th>Description</th>
-    </tr>
-    <tr>
-      <td>&lt;</td>
-      <td>Move the pointer one cell to the left.</td>
-    </tr>
-    <tr>
-      <td>&gt;</td>
-      <td>Move the pointer one cell to the right.</td>
-    </tr>
-    <tr>
-      <td>+</td>
-      <td>Increment the current cell by 1.</td>
-    </tr>
-    <tr>
-      <td>-</td>
-      <td>Decrement the current cell by 1.</td>
-    </tr>
-    <tr>
-      <td>[</td>
-      <td>Begin a loop while the cell at the pointer is not zero.</td>
-    </tr>
-    <tr>
-      <td>]</td>
-      <td>Mark the ending of a loop body.</td>
-    </tr>
-    <tr>
-      <td>,</td>
-      <td>Make the current cell equal to the next byte of input.</td>
-    </tr>
-    <tr>
-      <td>.</td>
-      <td>Output the current cell as a byte.</td>
-    </tr>
-  </table>
-</div>
+  
+|Operator|Description|C Equivalent|
+|:-:|-|-|
+|<|Move the pointer one cell to the left.|`ptr--;`|
+|>|Move the pointer one cell to the right.|`ptr++;`|
+|+|Increment the current cell by 1.|`tape[ptr]++;`|
+|-|Decrement the current cell by 1.|`tape[ptr]--;`|
+|,|Make the current cell equal to the next byte of input.|`tape[ptr] = getchar();`|
+|.|Output the current cell as a byte.|`putchar(tape[ptr]);`|
+|[|Begin a loop while the cell at the pointer is not zero.|`while (tape[ptr]) {`|
+|]|Mark the ending of a loop body.|`}`|
 <!-- 
 |Operator|Description|
 |-|-|
@@ -107,14 +79,14 @@ Brainf*** programs are composed entirely of the following operators *only*:
 
 Dynamic Brainf*** provides six additional operators: two for memory management, two for pointer manipulation, and two for better IO. With these new operators, it's possible to compile common abstractions like references, stack operations, and compound datatypes.
 
-|Operator|Description|
-|-|-|
-|?|Read the value of the current cell, and allocate that many cells at the end of the tape. Then, set the current cell's value equal to the index of first cell in that allocated block.|
-|!|Read the value of the current cell, and free the allocated cells starting at that index.|
-|*|Push the pointer to a stack, and set the pointer equal to the value of the current cell.|
-|&|Pop the old pointer off the dereference stack, and set the pointer equal to it.|
-|#|Make the current cell equal to the next integer in the input buffer (like `scanf("%d", &tape[pointer])`).|
-|$|Output the current cell as an integer (like `printf("%d", tape[pointer])`).|
+|Operator|Description|C Equivalent|
+|:-:|-|-|
+|?|Read the value of the current cell, and allocate that many cells at the end of the tape. Then, set the current cell's value equal to the index of first cell in that allocated block.|`tape[ptr] = allocate(tape, ptr, taken_cells); /* This uses a predefined allocator. Mine is 17 lines. */`|
+|!|Read the value of the current cell, and free **+ zero** the allocated cells starting at that index.|`free_mem(tape, ptr, taken_cells); /* This uses a predefined deallocator. Mine is 7 lines. */ `|
+|*|Push the pointer to a stack, and set the pointer equal to the value of the current cell.|`ref_stack[ref_ptr++] = ptr; ptr = tape[ptr]; /* ref_stack is an array of unsigned ints, and ref_ptr is initialized to zero.*/`|
+|&|Pop the old pointer off the dereference stack, and set the pointer equal to it.|`ptr = ref_stack[--ref_ptr];`|
+|#|Make the current cell equal to the next integer in the input buffer.|`scanf("%d", &tape[pointer])`|
+|$|Output the current cell as an integer.|`printf("%d", tape[pointer])`|
 
 To give you some perspective on just how little Dynamic Brainf\*\*\* adds, ***the code responsible for assembling Dynamic Brainf\*\*\* in this compiler is just 24 lines long!*** You can write a compiler for it just using string replacement!
 
