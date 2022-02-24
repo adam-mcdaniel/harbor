@@ -57,6 +57,7 @@ Brainf*** programs are composed entirely of the following operators *only*:
 </div>
 
 
+
 |Operator|Description|C Equivalent|
 |:-:|-|-|
 |<|Move the tape pointer one cell to the left.|`ptr--;`|
